@@ -7,7 +7,6 @@ export default function MovieArchive() {
   const [notes, setNotes] = useState<{[key: string]: string}>({});
   const [flipped, setFlipped] = useState<{[key: number]: boolean}>({});
   
-  // Фильтры
   const [search, setSearch] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ВСЕ ЖАНРЫ');
   const [statusFilter, setStatusFilter] = useState('ВСЕ');
@@ -30,11 +29,12 @@ export default function MovieArchive() {
               const key = Object.keys(row).find(k => names.some(n => k.toLowerCase().trim() === n.toLowerCase()));
               return key ? row[key]?.toString().trim() : "";
             };
+            const rawStatus = getVal(['смотрели', 'статус', 'status']);
             return { 
               title: getVal(['название', 'фильм', 'title']), 
               genre: getVal(['жанр', 'genre']), 
               year: getVal(['год', 'year']), 
-              isWatched: getVal(['смотрели', 'статус', 'status']).length > 0, 
+              isWatched: rawStatus.length > 0, 
               rating: getVal(['оценка', 'рейтинг', 'rating']) 
             };
           }).filter(m => m.title && m.title.length > 1);
@@ -77,55 +77,54 @@ export default function MovieArchive() {
   return (
     <div className="main-container">
       <style>{`
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         :root { 
-          --bg: #B8A9C9; /* Мягкий лавандовый */
-          --accent: #4A0E0E; /* Винный */
-          --card-front: #5A3E5D; /* Пыльный фиолетовый */
-          --card-back: #EADBC8; /* Теплый беж */
-          --text-main: #2D132C;
+          --bg: #F4F1EE; 
+          --watched-color: #5C1A1A; /* Бордовый */
+          --queue-color: #24293E;   /* Глубокий синий */
+          --text-light: #FFFFFF;
+          --text-dark: #24293E;
         }
 
         .main-container { 
           background: var(--bg); 
           min-height: 100vh; 
           padding: 20px; 
-          color: var(--text-main); 
-          font-family: 'Inter', sans-serif;
-          overflow-x: hidden;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         .header h1 { 
-          font-size: clamp(28px, 10vw, 50px); 
+          font-size: clamp(32px, 8vw, 56px); 
           font-weight: 900; 
           text-align: center; 
-          text-transform: lowercase;
-          color: var(--accent);
+          color: var(--text-dark);
           margin-bottom: 30px;
+          letter-spacing: -2px;
         }
 
         .control-panel { 
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 10px;
+          gap: 12px;
           max-width: 1000px;
           margin: 0 auto 40px;
         }
 
         .input-style { 
-          background: rgba(255,255,255,0.2); 
-          border: 1.5px solid var(--accent); 
-          padding: 10px; 
-          border-radius: 15px; 
-          color: var(--accent);
+          background: white; 
+          border: 2px solid rgba(36, 41, 62, 0.1); 
+          padding: 12px; 
+          border-radius: 12px; 
+          color: var(--text-dark);
           font-weight: 700;
-          font-size: 12px;
-          backdrop-filter: blur(10px);
+          font-size: 13px;
+          width: 100%;
+          outline: none;
         }
 
         .movie-grid { 
           display: grid; 
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
           gap: 25px; 
           max-width: 1200px; 
           margin: 0 auto; 
@@ -133,11 +132,11 @@ export default function MovieArchive() {
         }
 
         .flip-card { 
-          height: 420px; 
+          height: 380px; 
           cursor: pointer; 
           position: relative; 
           transform-style: preserve-3d; 
-          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
         .flip-card.is-flipped { transform: rotateY(180deg); }
@@ -147,55 +146,72 @@ export default function MovieArchive() {
           width: 100%; 
           height: 100%; 
           backface-visibility: hidden; 
-          border-radius: 40px; 
+          border-radius: 30px; 
           padding: 30px; 
           display: flex; 
           flex-direction: column; 
-          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-          border: 2px solid var(--accent);
+          box-shadow: 0 10px 25px rgba(0,0,0,0.08);
         }
 
-        .face-front { background: var(--card-front); color: #F9F4F0; }
-        .face-back { background: var(--card-back); color: var(--accent); transform: rotateY(180deg); }
+        /* Цвета лицевых сторон */
+        .face-front.is-watched { background: var(--watched-color); }
+        .face-front.is-queue { background: var(--queue-color); }
+        
+        .face-front { color: var(--text-light); }
+        .face-back { 
+          background: white; 
+          color: var(--text-dark); 
+          transform: rotateY(180deg); 
+          border: 3px solid var(--text-dark);
+        }
 
-        .status-tag {
+        .status-badge {
           font-size: 10px;
-          font-weight: 900;
+          font-weight: 800;
           text-transform: uppercase;
-          background: var(--accent);
-          color: white;
-          padding: 4px 12px;
-          border-radius: 20px;
+          background: rgba(255,255,255,0.2);
+          padding: 5px 12px;
+          border-radius: 10px;
           width: fit-content;
-          margin-bottom: 15px;
+          margin-bottom: 20px;
         }
 
-        .movie-title { font-size: 24px; font-weight: 900; line-height: 1.2; margin: 10px 0; }
-        .genre-info { font-size: 12px; opacity: 0.8; font-style: italic; }
+        .movie-title { font-size: 28px; font-weight: 800; line-height: 1.1; margin: 0 0 10px 0; }
+        .genre-info { font-size: 12px; opacity: 0.7; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 
         .note-area { 
-          background: rgba(255,255,255,0.4); 
-          border: 2px dashed var(--accent); 
-          border-radius: 20px; 
+          background: #F9F9F9; 
+          border: 1px solid #DDD; 
+          border-radius: 15px; 
           padding: 15px; 
           height: 100%; 
           width: 100%; 
           resize: none; 
           font-family: inherit;
-          color: var(--accent);
-          font-weight: 600;
+          color: var(--text-dark);
+          font-size: 14px;
           outline: none;
         }
 
-        .loader { text-align: center; margin-top: 100px; font-weight: 900; color: var(--accent); }
+        .bottom-info {
+          margin-top: auto;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          font-weight: 800;
+        }
+
+        .rating-display { font-size: 40px; line-height: 1; letter-spacing: -2px; }
+
+        .loader { display: flex; height: 100vh; align-items: center; justify-content: center; font-weight: 900; }
       `}</style>
 
       <div className="header">
-        <h1>Movie Diary // 2026</h1>
+        <h1>Мой Архив</h1>
       </div>
 
       <div className="control-panel">
-        <input className="input-style" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
+        <input className="input-style" placeholder="НАЗВАНИЕ..." onChange={e => setSearch(e.target.value)} />
         <select className="input-style" onChange={e => setSelectedGenre(e.target.value)}>
           {categories.genres.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -207,8 +223,8 @@ export default function MovieArchive() {
           <option value="ВСЕ ОЦЕНКИ">ОЦЕНКА</option>
           {categories.ratings.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select className="input-style" style={{background: 'var(--accent)', color: 'white'}} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="ВСЕ">СТАТУС</option>
+        <select className="input-style" style={{background: 'var(--watched-color)', color: 'white'}} onChange={e => setStatusFilter(e.target.value)}>
+          <option value="ВСЕ">СТАТУС: ВСЕ</option>
           <option value="СМОТРЕЛИ">СМОТРЕЛИ</option>
           <option value="В ОЧЕРЕДИ">В ОЧЕРЕДИ</option>
         </select>
@@ -217,21 +233,28 @@ export default function MovieArchive() {
       <div className="movie-grid">
         {filtered.map((m, i) => (
           <div key={i} className={`flip-card ${flipped[i] ? 'is-flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
-            <div className="card-face face-front">
-              <div className="status-tag">{m.isWatched ? '✓ watched' : '○ queue'}</div>
+            
+            {/* ЛИЦЕВАЯ СТОРОНА */}
+            <div className={`card-face face-front ${m.isWatched ? 'is-watched' : 'is-queue'}`}>
+              <div className="status-badge">{m.isWatched ? 'Смотрели' : 'В очереди'}</div>
               <h2 className="movie-title">{m.title}</h2>
               <p className="genre-info">{m.genre}</p>
-              <div style={{marginTop: 'auto', display: 'flex', justifyContent: 'space-between', fontWeight: 900}}>
+              
+              <div className="bottom-info">
                 <span>{m.year}</span>
-                <span>★ {m.rating}</span>
+                <div className="rating-display">
+                  <span style={{fontSize: '12px', display: 'block', marginBottom: '5px'}}>Оценка</span>
+                  {m.rating || '—'}
+                </div>
               </div>
             </div>
 
+            {/* ОБРАТНАЯ СТОРОНА */}
             <div className="card-face face-back" onClick={(e) => e.stopPropagation()}>
-              <p style={{fontSize: '10px', fontWeight: 900, marginBottom: '10px'}}>ЗАМЕТКИ:</p>
+              <p style={{fontSize: '11px', fontWeight: 900, marginBottom: '10px', textTransform: 'uppercase'}}>Мои мысли:</p>
               <textarea 
                 className="note-area" 
-                placeholder="Твои мысли..."
+                placeholder="Напишите здесь свои впечатления..."
                 value={notes[m.title] || ''}
                 onChange={(e) => {
                   const newNotes = { ...notes, [m.title]: e.target.value };
@@ -239,10 +262,11 @@ export default function MovieArchive() {
                   localStorage.setItem('movie_notes', JSON.stringify(newNotes));
                 }}
               />
-              <div style={{marginTop: '15px', textAlign: 'center', fontSize: '10px', fontWeight: 900}} onClick={() => setFlipped({...flipped, [i]: false})}>
-                [ ЗАКРЫТЬ ]
+              <div style={{marginTop: '15px', textAlign: 'center', fontSize: '11px', fontWeight: 900}} onClick={() => setFlipped({...flipped, [i]: false})}>
+                [ НАЖМИТЕ, ЧТОБЫ ВЕРНУТЬ ]
               </div>
             </div>
+
           </div>
         ))}
       </div>
