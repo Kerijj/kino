@@ -4,12 +4,18 @@ import Papa from 'papaparse';
 
 export default function MovieArchive() {
   const [movies, setMovies] = useState<any[]>([]);
+  const [notes, setNotes] = useState<{[key: string]: string}>({});
+  const [flipped, setFlipped] = useState<{[key: number]: boolean}>({});
   const [search, setSearch] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('ВСЕ ЖАНРЫ');
-  const [statusFilter, setStatusFilter] = useState('ВСЕ'); // 'ВСЕ', 'СМОТРЕЛИ', 'В ОЧЕРЕДИ'
+  const [statusFilter, setStatusFilter] = useState('ВСЕ');
   const [loading, setLoading] = useState(true);
 
+  // Загрузка данных и заметок
   useEffect(() => {
+    const savedNotes = localStorage.getItem('movie_notes');
+    if (savedNotes) setNotes(JSON.parse(savedNotes));
+
     const csvUrl = "https://docs.google.com/spreadsheets/d/1pge7MWZuBDMc_3gRfNYwnwBUVDDMA-g3emCDbGlZFwc/export?format=csv";
     fetch(csvUrl).then(r => r.text()).then(text => {
       Papa.parse(text, {
@@ -18,24 +24,20 @@ export default function MovieArchive() {
         complete: (res) => {
           const data = res.data.map((row: any) => {
             const getVal = (names: string[]) => {
-              const key = Object.keys(row).find(k => 
-                names.some(n => k.toLowerCase().trim() === n.toLowerCase())
-              );
+              const key = Object.keys(row).find(k => names.some(n => k.toLowerCase().trim() === n.toLowerCase()));
               return key ? row[key]?.toString().trim() : "";
             };
-
             const title = getVal(['название', 'фильм', 'title']);
-            const genre = getVal(['жанр', 'genre']);
-            const desc = getVal(['описание', 'description']);
-            const year = getVal(['год', 'year']);
-            const rawStatus = getVal(['смотрели', 'статус', 'status']);
-            const rating = getVal(['оценка', 'рейтинг', 'rating']);
-
-            const isWatched = rawStatus.length > 0;
-
-            return { title, genre, desc, year, isWatched, rating };
+            const isWatched = getVal(['смотрели', 'статус', 'status']).length > 0;
+            return { 
+              title, 
+              genre: getVal(['жанр', 'genre']), 
+              desc: getVal(['описание', 'description']), 
+              year: getVal(['год', 'year']), 
+              isWatched, 
+              rating: getVal(['оценка', 'рейтинг', 'rating']) 
+            };
           }).filter(m => m.title && m.title.length > 1);
-          
           setMovies(data);
           setLoading(false);
         }
@@ -43,128 +45,109 @@ export default function MovieArchive() {
     });
   }, []);
 
-  const categories = useMemo(() => {
-    const all = new Set<string>();
-    movies.forEach(m => {
-      if (m.genre) {
-        m.genre.split(/[\\/;,]/).forEach((g: string) => {
-          const clean = g.trim().toUpperCase();
-          if (clean && clean.length > 1) all.add(clean);
-        });
-      }
-    });
-    return ['ВСЕ ЖАНРЫ', ...Array.from(all)].sort();
-  }, [movies]);
+  const handleNoteChange = (title: string, value: string) => {
+    const newNotes = { ...notes, [title]: value };
+    setNotes(newNotes);
+    localStorage.setItem('movie_notes', JSON.stringify(newNotes));
+  };
+
+  const toggleFlip = (index: number) => {
+    setFlipped(prev => ({ ...prev, [index]: !prev[index] }));
+  };
 
   const filtered = useMemo(() => {
     return movies.filter(m => {
-      // 1. Фильтр по жанру
-      const matchesGenre = selectedGenre === 'ВСЕ ЖАНРЫ' || 
-        (m.genre && m.genre.toUpperCase().includes(selectedGenre));
-      
-      // 2. Фильтр по поисковому запросу
-      const q = search.toLowerCase();
-      const matchesSearch = !search || 
-        m.title.toLowerCase().includes(q) || 
-        m.year.toLowerCase().includes(q);
-
-      // 3. Фильтр по статусу
-      let matchesStatus = true;
-      if (statusFilter === 'СМОТРЕЛИ') matchesStatus = m.isWatched;
-      if (statusFilter === 'В ОЧЕРЕДИ') matchesStatus = !m.isWatched;
-
+      const matchesGenre = selectedGenre === 'ВСЕ ЖАНРЫ' || m.genre?.toUpperCase().includes(selectedGenre);
+      const matchesSearch = !search || m.title.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === 'ВСЕ' || (statusFilter === 'СМОТРЕЛИ' ? m.isWatched : !m.isWatched);
       return matchesGenre && matchesSearch && matchesStatus;
     });
   }, [movies, selectedGenre, search, statusFilter]);
 
-  if (loading) return (
-    <div style={{display:'flex', height:'100vh', alignItems:'center', justifyContent:'center', background:'#FDF0E5', color:'#8E443D', fontFamily:'monospace', letterSpacing:'4px'}}>
-      ОБНОВЛЕНИЕ ФИЛЬТРОВ...
-    </div>
-  );
+  if (loading) return <div className="loader">ЗАГРУЗКА АРХИВА...</div>;
 
   return (
-    <div style={{background: '#FDF0E5', minHeight: '100vh', padding: '40px 20px', fontFamily: 'system-ui, sans-serif', color: '#8E443D'}}>
+    <div className="main-container">
       <style>{`
-        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; max-width: 1200px; margin: 0 auto; }
-        .card { padding: 40px; border-radius: 50px; transition: 0.4s ease; display: flex; flex-direction: column; position: relative; border: none; }
-        .card-queue { background-color: #FFFFFF !important; box-shadow: 0 10px 20px rgba(142,68,61,0.05); }
-        .card-watched { background-color: #F7D8C4 !important; box-shadow: 0 10px 20px rgba(142,68,61,0.08); }
-        .card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(142,68,61,0.15); }
+        :root { --bg: #F9F4F0; --accent: #4A0E0E; --card-front: #FFFFFF; --card-back: #F2EBE5; }
+        .main-container { background: var(--bg); min-height: 100vh; padding: 40px 20px; color: var(--accent); font-family: 'Inter', sans-serif; }
+        .header { text-align: center; margin-bottom: 50px; }
+        .header h1 { font-size: 70px; font-weight: 900; letter-spacing: -3px; text-transform: uppercase; margin: 0; }
         
-        .control-panel { display: flex; gap: 20px; justify-content: center; marginBottom: 60px; flex-wrap: wrap; }
-        .search-input { background: white; border: none; border-radius: 25px; padding: 15px 25px; width: 280px; color: #8E443D; outline: none; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
-        .custom-select { background: #E88E7D; color: white; border: none; border-radius: 25px; padding: 15px 25px; font-weight: bold; cursor: pointer; outline: none; box-shadow: 0 4px 15px rgba(232,142,125,0.2); }
+        .control-panel { display: flex; gap: 15px; justify-content: center; margin-bottom: 50px; }
+        .input-style { background: white; border: 1px solid rgba(74,14,14,0.1); padding: 12px 20px; border-radius: 15px; color: var(--accent); outline: none; }
         
-        .badge { background: rgba(255,255,255,0.6); padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
-        .rating-val { font-size: 64px; font-weight: 900; line-height: 0.8; font-style: italic; letter-spacing: -2px; }
+        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; max-width: 1200px; margin: 0 auto; perspective: 1000px; }
+        
+        /* Механика переворота */
+        .flip-card { height: 350px; cursor: pointer; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .flip-card.is-flipped { transform: rotateY(180deg); }
+        
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 35px; padding: 30px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        
+        .face-front { background: var(--card-front); }
+        .face-back { background: var(--card-back); transform: rotateY(180deg); border: 2px dashed var(--accent); }
+        
+        .status-pill { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; color: #E88E7D; }
+        .movie-title { font-size: 28px; font-weight: 800; line-height: 1.1; margin: 10px 0; flex-grow: 1; }
+        .genre-tag { font-size: 11px; opacity: 0.5; font-weight: 600; text-transform: uppercase; }
+        
+        .rating-stars { font-size: 40px; font-weight: 900; font-style: italic; color: var(--accent); opacity: 0.2; margin-bottom: 15px; }
+        .note-area { background: transparent; border: 1px solid rgba(74,14,14,0.1); border-radius: 15px; padding: 15px; height: 150px; width: 100%; resize: none; font-size: 14px; color: var(--accent); }
+        
+        .loader { display: flex; height: 100vh; align-items: center; justify-content: center; background: var(--bg); color: var(--accent); font-weight: 900; letter-spacing: 5px; }
       `}</style>
 
-      <div style={{maxWidth:'1200px', margin:'0 auto'}}>
-        <header style={{textAlign:'center', marginBottom: '60px'}}>
-          <h1 style={{fontSize: 'clamp(40px, 10vw, 90px)', fontWeight: '900', textTransform: 'uppercase', margin: '0', letterSpacing: '-6px', lineHeight: 0.85}}>Архив</h1>
-          <p style={{fontFamily:'monospace', opacity: 0.4, letterSpacing: '6px', fontSize: '10px', marginTop: '15px'}}>FILTERS ENABLED // 2026</p>
-        </header>
+      <div className="header">
+        <h1>Movie Archive</h1>
+        <p style={{opacity: 0.4, fontWeight: 700}}>Curated Collection / 2026</p>
+      </div>
 
-        <div className="control-panel" style={{marginBottom: '60px'}}>
-          {/* Поиск */}
-          <input 
-            type="text" 
-            placeholder="Поиск..." 
-            className="search-input" 
-            onChange={(e) => setSearch(e.target.value)} 
-          />
-          
-          {/* Фильтр Жанра */}
-          <select className="custom-select" onChange={(e) => setSelectedGenre(e.target.value)}>
-            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+      <div className="control-panel">
+        <input className="input-style" placeholder="Название..." onChange={e => setSearch(e.target.value)} />
+        <select className="input-style" onChange={e => setSelectedGenre(e.target.value)}>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select className="input-style" style={{background: 'var(--accent)', color: 'white'}} onChange={e => setStatusFilter(e.target.value)}>
+          <option value="ВСЕ">ВСЕ СТАТУСЫ</option>
+          <option value="СМОТРЕЛИ">СМОТРЕЛИ</option>
+          <option value="В ОЧЕРЕДИ">В ОЧЕРЕДИ</option>
+        </select>
+      </div>
 
-          {/* НОВЫЙ Фильтр Статуса */}
-          <select 
-            className="custom-select" 
-            style={{background: '#8E443D'}} 
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="ВСЕ">ВСЕ СТАТУСЫ</option>
-            <option value="СМОТРЕЛИ">СМОТРЕЛИ</option>
-            <option value="В ОЧЕРЕДИ">В ОЧЕРЕДИ</option>
-          </select>
-        </div>
-
-        <div className="movie-grid">
-          {filtered.map((m, i) => (
-            <article 
-              key={i} 
-              className={`card ${m.isWatched ? 'card-watched' : 'card-queue'}`}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', alignItems: 'center' }}>
-                <span style={{fontSize:'10px', fontWeight:'900', opacity:0.3, letterSpacing:'2px'}}>{m.genre}</span>
-                <span style={{ 
-                  fontSize: '9px', 
-                  fontWeight: '900', 
-                  padding: '4px 10px', 
-                  borderRadius: '10px',
-                  background: m.isWatched ? 'rgba(142,68,61,0.1)' : 'rgba(232,142,125,0.1)',
-                  color: m.isWatched ? '#8E443D' : '#E88E7D'
-                }}>
-                  {m.isWatched ? 'СМОТРЕЛИ' : 'В ОЧЕРЕДИ'}
-                </span>
+      <div className="movie-grid">
+        {filtered.map((m, i) => (
+          <div key={i} className={`flip-card ${flipped[i] ? 'is-flipped' : ''}`} onClick={() => toggleFlip(i)}>
+            {/* ЛИЦЕВАЯ СТОРОНА */}
+            <div className="card-face face-front">
+              <span className="status-pill">{m.isWatched ? '● Просмотрено' : '○ В очереди'}</span>
+              <h2 className="movie-title">{m.title}</h2>
+              <span className="genre-tag">{m.genre}</span>
+              <div style={{marginTop: 'auto', display: 'flex', justifyContent: 'space-between', opacity: 0.3, fontSize: '12px'}}>
+                <span>{m.year}</span>
+                <span>Нажми для деталей →</span>
               </div>
+            </div>
 
-              <h2 style={{fontSize:'32px', fontWeight:'900', margin:'0 0 15px 0', lineHeight:'1.1'}}>{m.title}</h2>
-              <p style={{fontSize:'14px', opacity:0.7, lineHeight:'1.6', marginBottom:'40px', flexGrow: 1}}>{m.desc}</p>
-              
-              <div style={{marginTop:'auto', paddingTop:'20px', borderTop:'1px solid rgba(142,68,61,0.08)', display:'flex', justifyContent:'space-between', alignItems:'flex-end'}}>
-                <span className="badge">{m.year}</span>
-                <div style={{textAlign:'right'}}>
-                  <span style={{fontSize:'9px', fontWeight:'900', opacity:0.2, display:'block', marginBottom: '5px'}}>ОЦЕНКА</span>
-                  <span className="rating-val">{m.rating || '—'}</span>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
+            {/* ОБРАТНАЯ СТОРОНА */}
+            <div className="card-face face-back" onClick={(e) => e.stopPropagation()}>
+              <div className="rating-stars">★ {m.rating || '0'}/10</div>
+              <p style={{fontSize: '12px', marginBottom: '10px', fontWeight: 600}}>МОИ ЗАМЕТКИ:</p>
+              <textarea 
+                className="note-area" 
+                placeholder="Что ты думаешь об этом фильме?.."
+                value={notes[m.title] || ''}
+                onChange={(e) => handleNoteChange(m.title, e.target.value)}
+              />
+              <button 
+                onClick={() => toggleFlip(i)}
+                style={{marginTop: 'auto', background: 'var(--accent)', color: 'white', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer'}}
+              >
+                ← НАЗАД
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
