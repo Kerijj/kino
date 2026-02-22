@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f4f1ea;
+  --wine: #722f37;
+}
+
+body {
+  background-color: var(--bg);
+  background-image: url("https://www.transparenttextures.com/patterns/handmade-paper.png");
+  color: var(--wine);
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* Убираем любые системные фоны */
+* {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Исключение только для кастомных кнопок, если они понадобятся, но пока всё прозрачно */
