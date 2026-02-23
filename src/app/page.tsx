@@ -76,37 +76,35 @@ export default function MovieArchive() {
   if (loading) return <div style={{background:'#8C9B81', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:900}}>ЗАГРУЗКА...</div>;
 
   return (
-    <div className="main-container">
+    <div className="main-wrapper">
       <style>{`
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        :root { 
-          --bg-olive: #8C9B81;
-          --accent-sand: #EAD9A6;
-          --card-green: #7A9680;
-          --card-red: #A67575;
-          --text-yellow: #F2C94C;
-          --text-dark: #2A2A2A;
-          --note-bg: #EAD9A6;
+        /* СБРОС СТАНДАРТНЫХ ЦВЕТОВ VERCEL/NEXT */
+        html, body { 
+          background-color: #8C9B81 !important; 
+          margin: 0; 
+          padding: 0; 
+          color: #2A2A2A;
         }
 
-        body { margin: 0; background: var(--bg-olive); }
-
-        .main-container { 
+        .main-wrapper { 
+          background-color: #8C9B81; 
           min-height: 100vh; 
           padding: 20px; 
-          font-family: 'Inter', sans-serif;
+          font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        .header-container {
+          max-width: 1200px;
+          margin: 0 auto 30px;
         }
 
         .header-title { 
-          font-size: clamp(40px, 10vw, 80px); 
+          font-size: clamp(40px, 8vw, 80px); 
           font-weight: 900; 
-          color: var(--text-dark);
+          color: #2A2A2A;
           text-transform: uppercase;
-          margin-bottom: 30px;
-          max-width: 1200px;
-          margin-left: auto;
-          margin-right: auto;
+          margin: 0;
+          letter-spacing: -2px;
         }
 
         .control-panel { 
@@ -118,16 +116,17 @@ export default function MovieArchive() {
         }
 
         .filter-item { 
-          background: var(--accent-sand); 
+          background-color: #EAD9A6 !important; 
           border: none; 
           padding: 15px 20px; 
           border-radius: 12px; 
           font-weight: 800;
           font-size: 14px;
-          color: var(--text-dark);
+          color: #2A2A2A !important;
           outline: none;
           width: 100%;
           text-transform: uppercase;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
         .movie-grid { 
@@ -140,7 +139,7 @@ export default function MovieArchive() {
         }
 
         .flip-card { 
-          height: 450px; 
+          height: 460px; 
           cursor: pointer; 
           position: relative; 
           transform-style: preserve-3d; 
@@ -158,24 +157,24 @@ export default function MovieArchive() {
           padding: 35px; 
           display: flex; 
           flex-direction: column; 
-          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-          border: 1px solid rgba(0,0,0,0.1);
+          box-shadow: 0 15px 35px rgba(0,0,0,0.2);
         }
 
-        .face-front.is-watched { background: var(--card-red); }
-        .face-front.is-queue { background: var(--card-green); }
+        .face-front.is-watched { background-color: #A67575; }
+        .face-front.is-queue { background-color: #7A9680; }
         
         .face-back { 
-          background: var(--note-bg); 
-          color: var(--text-dark); 
+          background-color: #EAD9A6; 
+          color: #2A2A2A; 
           transform: rotateY(180deg); 
+          border: 2px solid #2A2A2A;
         }
 
         .movie-status {
           font-size: 11px;
           font-weight: 900;
           text-transform: uppercase;
-          color: var(--text-yellow);
+          color: #F2C94C;
           margin-bottom: 20px;
           display: flex;
           align-items: center;
@@ -186,15 +185,15 @@ export default function MovieArchive() {
           font-size: 28px; 
           font-weight: 900; 
           line-height: 1.1; 
-          color: var(--text-yellow);
-          margin-bottom: 15px;
+          color: #F2C94C;
+          margin: 0 0 15px 0;
           text-transform: uppercase;
         }
 
         .movie-meta { 
           font-size: 13px; 
           font-weight: 700; 
-          color: var(--text-yellow); 
+          color: #F2C94C; 
           margin-bottom: 20px;
           opacity: 0.9;
         }
@@ -202,46 +201,51 @@ export default function MovieArchive() {
         .movie-desc { 
           font-size: 14px; 
           line-height: 1.5; 
-          color: var(--text-yellow);
-          opacity: 0.8;
+          color: #F2C94C;
+          opacity: 0.85;
           display: -webkit-box;
-          -webkit-line-clamp: 4;
+          -webkit-line-clamp: 5;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
 
-        .rating-label {
+        .rating-block {
           margin-top: auto;
+        }
+
+        .rating-label {
           font-size: 11px;
           font-weight: 900;
-          color: var(--text-yellow);
-          opacity: 0.6;
+          color: #F2C94C;
+          opacity: 0.7;
           margin-bottom: 5px;
         }
 
         .rating-score {
-          font-size: 48px;
+          font-size: 52px;
           font-weight: 900;
-          color: var(--text-yellow);
+          color: #F2C94C;
           line-height: 1;
         }
 
         .note-area { 
           background: rgba(0,0,0,0.05); 
-          border: 2px dashed var(--text-dark); 
+          border: 2px dashed #2A2A2A; 
           border-radius: 15px; 
           padding: 20px; 
           height: 100%; 
           width: 100%; 
           resize: none; 
           font-family: inherit;
-          color: var(--text-dark);
+          color: #2A2A2A;
           font-weight: 700;
           outline: none;
         }
       `}</style>
 
-      <h1 className="header-title">Кино Архив</h1>
+      <div className="header-container">
+        <h1 className="header-title">Кино Архив</h1>
+      </div>
 
       <div className="control-panel">
         <input className="filter-item" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
@@ -256,7 +260,7 @@ export default function MovieArchive() {
           <option value="ВСЕ ОЦЕНКИ">РЕЙТИНГ</option>
           {categories.ratings.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select className="filter-item" style={{background: '#A67575', color: 'white'}} onChange={e => setStatusFilter(e.target.value)}>
+        <select className="filter-item" style={{backgroundColor: '#A67575', color: 'white'}} onChange={e => setStatusFilter(e.target.value)}>
           <option value="ВСЕ">СТАТУС: ВСЕ</option>
           <option value="СМОТРЕЛИ">СМОТРЕЛИ</option>
           <option value="В ОЧЕРЕДИ">В ОЧЕРЕДИ</option>
@@ -267,7 +271,7 @@ export default function MovieArchive() {
         {filtered.map((m, i) => (
           <div key={i} className={`flip-card ${flipped[i] ? 'is-flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
             
-            {/* ЛИЦЕВАЯ СТОРОНА */}
+            {/* FRONT */}
             <div className={`card-face face-front ${m.isWatched ? 'is-watched' : 'is-queue'}`}>
               <div className="movie-status">
                 {m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}
@@ -277,11 +281,13 @@ export default function MovieArchive() {
               <div className="movie-meta">{m.genre} • {m.year}</div>
               <p className="movie-desc">{m.desc || 'Описание готовится...'}</p>
               
-              <div className="rating-label">РЕЙТИНГ</div>
-              <div className="rating-score">{m.rating || '—'}</div>
+              <div className="rating-block">
+                <div className="rating-label">РЕЙТИНГ</div>
+                <div className="rating-score">{m.rating || '—'}</div>
+              </div>
             </div>
 
-            {/* ОБРАТНАЯ СТОРОНА */}
+            {/* BACK */}
             <div className="card-face face-back" onClick={(e) => e.stopPropagation()}>
               <div style={{fontWeight: 900, marginBottom: '15px', textTransform: 'uppercase'}}>Мои мысли:</div>
               <textarea 
