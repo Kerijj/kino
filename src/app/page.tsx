@@ -22,10 +22,10 @@ export default function MovieArchive() {
           const data = res.data.map((row: any) => ({
             title: row['Название'] || row['Title'] || 'Без названия',
             genre: row['Жанр'] || row['Genre'] || 'Кино',
-            desc: row['Описание'] || row['Description'] || 'Нет описания',
-            year: row['Год'] || row['Year'] || '—',
+            desc: row['Описание'] || row['Description'] || '',
+            year: row['Год'] || row['Year'] || '',
             isWatched: (row['Статус'] || row['Status'] || '').toLowerCase().includes('смотр'),
-            rating: row['Рейтинг'] || row['Rating'] || '—'
+            rating: row['Рейтинг'] || row['Rating'] || ''
           })).filter(m => m.title !== 'Без названия');
           setMovies(data);
           setLoading(false);
@@ -42,189 +42,139 @@ export default function MovieArchive() {
     });
   }, [movies, search, statusFilter]);
 
-  if (loading) return <div className="loader">ЗАГРУЗКА...</div>;
+  if (loading) return <div className="loading">ЗАГРУЗКА ДАННЫХ...</div>;
 
   return (
-    <div className="app-container">
+    <div className="layout">
       <style>{`
         :root {
-          --bg: #8C9B81;
-          --sand: #EAD9A6;
-          --green-card: #7A9680;
-          --rose-card: #A67575;
-          --yellow-text: #F2C94C;
-          --dark-brown: #2D2926;
+          --bg-olive: #8C9B81;
+          --ui-sand: #EAD9A6;
+          --card-green: #7A9680;
+          --card-rose: #A67575;
+          --text-yellow: #F2C94C;
+          --deep-brown: #2D2926; /* Вместо черного */
         }
 
-        body { 
-          background-color: var(--bg) !important; 
-          margin: 0; 
-          color: var(--dark-brown);
-          font-family: sans-serif;
-        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg-olive); font-family: 'Inter', sans-serif; color: var(--deep-brown); }
 
-        .app-container { display: flex; min-height: 100vh; width: 100%; }
+        .layout { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
 
-        /* ГЛАВНАЯ ЧАСТЬ */
-        .main-view { 
+        /* ЛЕВАЯ ЧАСТЬ - КОНТЕНТ */
+        .content-side { 
           flex: 1; 
-          padding: 40px; 
-          display: flex; 
-          flex-direction: column;
-          box-sizing: border-box;
-        }
-
-        /* ЛЕНТА ЗАМЕТОК */
-        .sidebar { 
-          width: 380px; 
-          background: var(--sand); 
-          border-left: 4px solid var(--dark-brown); 
-          padding: 30px; 
           height: 100vh; 
-          position: sticky; 
-          top: 0; 
-          overflow-y: auto;
-          box-sizing: border-box;
+          overflow-y: auto; 
+          padding: 40px;
+          display: flex;
+          flex-direction: column;
         }
 
-        .sidebar-h2 { 
-          font-size: 24px; 
-          font-weight: 900; 
-          text-transform: uppercase; 
-          border-bottom: 2px solid var(--dark-brown); 
-          padding-bottom: 15px; 
-          margin-bottom: 30px;
+        /* ПРАВАЯ ЧАСТЬ - ЛЕНТА */
+        .sidebar { 
+          width: 350px; 
+          background: var(--ui-sand); 
+          border-left: 4px solid var(--deep-brown); 
+          height: 100vh; 
+          overflow-y: auto; 
+          padding: 30px;
         }
 
-        .sidebar-note { margin-bottom: 25px; font-size: 15px; border-bottom: 1px dashed var(--dark-brown); padding-bottom: 10px; }
-        .sidebar-note b { display: block; color: var(--rose-card); text-transform: uppercase; margin-bottom: 4px; }
+        .title-main { font-size: clamp(40px, 6vw, 80px); font-weight: 900; text-transform: uppercase; margin: 0 0 30px 0; letter-spacing: -3px; }
 
-        .header-big { font-size: 70px; font-weight: 900; text-transform: uppercase; letter-spacing: -3px; margin-bottom: 40px; }
-
-        .filters { display: flex; gap: 20px; margin-bottom: 40px; }
-        .ui-input { 
-          background: var(--sand); 
-          border: 3px solid var(--dark-brown); 
-          padding: 15px 20px; 
-          border-radius: 15px; 
-          font-weight: 800; 
-          color: var(--dark-brown); 
-          outline: none;
+        .controls { display: flex; gap: 15px; margin-bottom: 40px; }
+        .ui-select, .ui-input { 
+          background: var(--ui-sand); border: 3px solid var(--deep-brown); 
+          padding: 15px; border-radius: 12px; font-weight: 800; color: var(--deep-brown); outline: none;
         }
 
         /* СЕТКА КАРТОЧЕК */
-        .grid { 
+        .movie-grid { 
           display: grid; 
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
-          gap: 40px; 
-          width: 100%;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+          gap: 30px; 
+          padding-bottom: 50px;
         }
 
-        .card-box { 
-          height: 500px; 
-          perspective: 1500px; 
-          cursor: pointer;
-        }
-
+        /* 3D КАРТОЧКА */
+        .scene { height: 450px; perspective: 1200px; }
         .card-inner { 
-          position: relative; 
-          width: 100%; 
-          height: 100%; 
-          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); 
-          transform-style: preserve-3d; 
+          position: relative; width: 100%; height: 100%; 
+          transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+          transform-style: preserve-3d; cursor: pointer;
+        }
+        .scene.is-flipped .card-inner { transform: rotateY(180deg); }
+
+        .card-face { 
+          position: absolute; width: 100%; height: 100%; 
+          backface-visibility: hidden; border-radius: 25px; padding: 25px;
+          border: 4px solid var(--deep-brown); display: flex; flex-direction: column;
         }
 
-        .card-box.flipped .card-inner { transform: rotateY(180deg); }
+        .face-front.watched { background: var(--card-rose); }
+        .face-front.queue { background: var(--card-green); }
+        .face-back { background: var(--ui-sand); transform: rotateY(180deg); color: var(--deep-brown); }
 
-        .face { 
-          position: absolute; 
-          width: 100%; 
-          height: 100%; 
-          backface-visibility: hidden; 
-          border-radius: 30px; 
-          padding: 35px; 
-          border: 4px solid var(--dark-brown); 
-          box-sizing: border-box;
-          display: flex; 
-          flex-direction: column;
-        }
-
-        .front.watched { background: var(--rose-card); color: var(--yellow-text); }
-        .front.queue { background: var(--green-card); color: var(--yellow-text); }
-        
-        .back { 
-          background: var(--sand); 
-          transform: rotateY(180deg); 
-          color: var(--dark-brown); 
-        }
-
-        .m-title { font-size: 28px; font-weight: 900; text-transform: uppercase; line-height: 1.1; margin: 15px 0; }
-        .m-meta { font-size: 13px; font-weight: 700; opacity: 0.9; margin-bottom: 15px; }
-        .m-desc { font-size: 14px; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; }
-        .m-rating { margin-top: auto; font-size: 50px; font-weight: 900; letter-spacing: -2px; }
+        .m-status { font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-yellow); margin-bottom: 10px; }
+        .m-title { font-size: 26px; font-weight: 900; text-transform: uppercase; color: var(--text-yellow); line-height: 1.1; margin-bottom: 10px; }
+        .m-meta { font-size: 13px; font-weight: 700; color: var(--text-yellow); opacity: 0.9; margin-bottom: 15px; }
+        .m-desc { font-size: 14px; line-height: 1.4; color: var(--text-yellow); display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+        .m-rating { margin-top: auto; font-size: 50px; font-weight: 900; color: var(--text-yellow); letter-spacing: -2px; }
 
         .note-input { 
-          flex: 1; 
-          background: rgba(0,0,0,0.05); 
-          border: 2px dashed var(--dark-brown); 
-          border-radius: 15px; 
-          padding: 15px; 
-          resize: none; 
-          font-family: inherit; 
-          font-weight: 700; 
-          color: var(--dark-brown);
+          flex: 1; background: rgba(0,0,0,0.05); border: 2px dashed var(--deep-brown); 
+          border-radius: 15px; padding: 15px; resize: none; font-family: inherit; font-weight: 700;
         }
 
-        @media (max-width: 1200px) {
-          .app-container { flex-direction: column; }
-          .sidebar { width: 100%; height: auto; border-left: none; border-top: 4px solid var(--dark-brown); position: static; }
-          .main-view { padding: 20px; }
-        }
+        /* ЗАМЕТКИ В ЛЕНТЕ */
+        .sidebar-h2 { font-weight: 900; text-transform: uppercase; border-bottom: 3px solid var(--deep-brown); padding-bottom: 10px; margin-bottom: 20px; }
+        .sidebar-item { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--deep-brown); }
+        .sidebar-item b { display: block; color: var(--card-rose); text-transform: uppercase; font-size: 12px; }
 
-        .loader { height: 100vh; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 900; }
+        .loading { height: 100vh; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 30px; }
       `}</style>
 
-      <main className="main-view">
-        <h1 className="header-big">Кино Архив</h1>
+      {/* ЛЕВАЯ СТОРОНА */}
+      <section className="content-side">
+        <h1 className="title-main">Кино Архив</h1>
         
-        <div className="filters">
+        <div className="controls">
           <input className="ui-input" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
-          <select className="ui-input" onChange={e => setStatusFilter(e.target.value)}>
+          <select className="ui-select" onChange={e => setStatusFilter(e.target.value)}>
             <option value="ВСЕ">ВСЕ ФИЛЬМЫ</option>
             <option value="СМОТРЕЛИ">СМОТРЕЛИ</option>
             <option value="В ОЧЕРЕДИ">В ОЧЕРЕДИ</option>
           </select>
         </div>
 
-        <div className="grid">
+        <div className="movie-grid">
           {filtered.map((m, i) => (
-            <div key={i} className={`card-box ${flipped[i] ? 'flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
+            <div key={i} className={`scene ${flipped[i] ? 'is-flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
               <div className="card-inner">
-                {/* ЛИЦО */}
-                <div className={`face front ${m.isWatched ? 'watched' : 'queue'}`}>
-                  <div style={{fontSize: '11px', fontWeight: 900, textTransform: 'uppercase'}}>
-                    {m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}
-                  </div>
+                {/* ПЕРЕД */}
+                <div className={`card-face face-front ${m.isWatched ? 'watched' : 'queue'}`}>
+                  <div className="m-status">{m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}</div>
                   <div className="m-title">{m.title}</div>
                   <div className="m-meta">{m.genre} • {m.year}</div>
                   <div className="m-desc">{m.desc}</div>
-                  <div className="m-rating">{m.rating}</div>
+                  <div className="m-rating">{m.rating || '—'}</div>
                 </div>
 
-                {/* ОБРАТНАЯ СТОРОНА */}
-                <div className="face back" onClick={e => e.stopPropagation()}>
-                  <div style={{fontWeight: 900, marginBottom: '10px', textTransform: 'uppercase'}}>Мысли о фильме:</div>
+                {/* ЗАД */}
+                <div className="card-face face-back" onClick={e => e.stopPropagation()}>
+                  <div style={{fontWeight: 900, marginBottom: '10px'}}>ЗАМЕТКА:</div>
                   <textarea 
                     className="note-input"
                     value={notes[m.title] || ''}
-                    placeholder="Напишите здесь..."
+                    placeholder="Ваши мысли..."
                     onChange={(e) => {
-                      const newNotes = { ...notes, [m.title]: e.target.value };
-                      setNotes(newNotes);
-                      localStorage.setItem('shared_movie_notes', JSON.stringify(newNotes));
+                      const n = { ...notes, [m.title]: e.target.value };
+                      setNotes(n);
+                      localStorage.setItem('shared_movie_notes', JSON.stringify(n));
                     }}
                   />
-                  <div style={{marginTop: '15px', textAlign: 'center', fontSize: '11px', fontWeight: 900}} onClick={() => setFlipped({...flipped, [i]: false})}>
+                  <div style={{marginTop: '10px', textAlign: 'center', fontSize: '10px', fontWeight: 900}} onClick={() => setFlipped({...flipped, [i]: false})}>
                     [ ЗАКРЫТЬ ]
                   </div>
                 </div>
@@ -232,13 +182,14 @@ export default function MovieArchive() {
             </div>
           ))}
         </div>
-      </main>
+      </section>
 
+      {/* ПРАВАЯ СТОРОНА */}
       <aside className="sidebar">
         <div className="sidebar-h2">Лента заметок</div>
         {Object.entries(notes).map(([title, text]) => (
           text.trim() && (
-            <div key={title} className="sidebar-note">
+            <div key={title} className="sidebar-item">
               <b>{title}</b>
               {text}
             </div>
