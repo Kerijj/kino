@@ -73,225 +73,219 @@ export default function MovieArchive() {
     });
   }, [movies, selectedGenre, search, statusFilter, yearFilter, ratingFilter]);
 
-  if (loading) return <div style={{background:'#8C9B81', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:900}}>ЗАГРУЗКА...</div>;
+  if (loading) return <div style={{backgroundColor:'#8C9B81', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'black', fontWeight:900}}>ЗАГРУЗКА...</div>;
 
   return (
-    <div className="main-wrapper">
+    <div className="archive-container">
       <style>{`
-        /* СБРОС СТАНДАРТНЫХ ЦВЕТОВ VERCEL/NEXT */
         html, body { 
           background-color: #8C9B81 !important; 
           margin: 0; 
           padding: 0; 
-          color: #2A2A2A;
         }
 
-        .main-wrapper { 
+        .archive-container { 
           background-color: #8C9B81; 
           min-height: 100vh; 
-          padding: 20px; 
+          padding: 30px 20px; 
           font-family: 'Inter', -apple-system, sans-serif;
         }
 
-        .header-container {
-          max-width: 1200px;
-          margin: 0 auto 30px;
-        }
-
-        .header-title { 
-          font-size: clamp(40px, 8vw, 80px); 
+        .title-main { 
+          font-size: clamp(40px, 10vw, 90px); 
           font-weight: 900; 
           color: #2A2A2A;
           text-transform: uppercase;
-          margin: 0;
-          letter-spacing: -2px;
+          margin-bottom: 40px;
+          max-width: 1200px;
+          margin-left: auto;
+          margin-right: auto;
+          letter-spacing: -3px;
         }
 
-        .control-panel { 
+        .filter-bar { 
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
           gap: 15px;
           max-width: 1200px;
-          margin: 0 auto 50px;
+          margin: 0 auto 60px;
         }
 
-        .filter-item { 
+        .select-custom { 
           background-color: #EAD9A6 !important; 
           border: none; 
-          padding: 15px 20px; 
-          border-radius: 12px; 
+          padding: 18px 25px; 
+          border-radius: 15px; 
           font-weight: 800;
-          font-size: 14px;
+          font-size: 13px;
           color: #2A2A2A !important;
           outline: none;
-          width: 100%;
           text-transform: uppercase;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
-        .movie-grid { 
+        .cards-grid { 
           display: grid; 
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
-          gap: 30px; 
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+          gap: 40px; 
           max-width: 1200px; 
           margin: 0 auto; 
           perspective: 2000px;
+          padding-bottom: 50px;
         }
 
-        .flip-card { 
-          height: 460px; 
+        .card-item { 
+          height: 480px; 
           cursor: pointer; 
           position: relative; 
           transform-style: preserve-3d; 
-          transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+          transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          z-index: 1;
         }
 
-        .flip-card.is-flipped { transform: rotateY(180deg); }
+        .card-item.flipped { transform: rotateY(180deg); z-index: 10; }
 
-        .card-face { 
+        .card-side { 
           position: absolute; 
           width: 100%; 
           height: 100%; 
           backface-visibility: hidden; 
-          border-radius: 25px; 
-          padding: 35px; 
+          border-radius: 30px; 
+          padding: 40px; 
           display: flex; 
           flex-direction: column; 
-          box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.25);
         }
 
-        .face-front.is-watched { background-color: #A67575; }
-        .face-front.is-queue { background-color: #7A9680; }
+        .front-side.watched { background-color: #A67575 !important; }
+        .front-side.queue { background-color: #7A9680 !important; }
         
-        .face-back { 
-          background-color: #EAD9A6; 
+        .back-side { 
+          background-color: #EAD9A6 !important; 
           color: #2A2A2A; 
           transform: rotateY(180deg); 
-          border: 2px solid #2A2A2A;
+          border: 3px solid #2A2A2A;
         }
 
-        .movie-status {
+        .status-text {
           font-size: 11px;
           font-weight: 900;
           text-transform: uppercase;
           color: #F2C94C;
-          margin-bottom: 20px;
+          margin-bottom: 25px;
           display: flex;
           align-items: center;
           gap: 8px;
         }
 
-        .movie-title { 
-          font-size: 28px; 
+        .movie-name { 
+          font-size: 32px; 
           font-weight: 900; 
-          line-height: 1.1; 
+          line-height: 1; 
           color: #F2C94C;
           margin: 0 0 15px 0;
           text-transform: uppercase;
+          letter-spacing: -1px;
         }
 
-        .movie-meta { 
-          font-size: 13px; 
-          font-weight: 700; 
-          color: #F2C94C; 
-          margin-bottom: 20px;
-          opacity: 0.9;
-        }
-
-        .movie-desc { 
+        .movie-details { 
           font-size: 14px; 
-          line-height: 1.5; 
-          color: #F2C94C;
+          font-weight: 800; 
+          color: #F2C94C; 
+          margin-bottom: 25px;
           opacity: 0.85;
+        }
+
+        .movie-bio { 
+          font-size: 15px; 
+          line-height: 1.6; 
+          color: #F2C94C;
           display: -webkit-box;
           -webkit-line-clamp: 5;
           -webkit-box-orient: vertical;
           overflow: hidden;
+          margin-bottom: 30px;
         }
 
-        .rating-block {
+        .rating-num {
           margin-top: auto;
-        }
-
-        .rating-label {
-          font-size: 11px;
-          font-weight: 900;
-          color: #F2C94C;
-          opacity: 0.7;
-          margin-bottom: 5px;
-        }
-
-        .rating-score {
-          font-size: 52px;
+          font-size: 60px;
           font-weight: 900;
           color: #F2C94C;
           line-height: 1;
+          letter-spacing: -3px;
         }
 
-        .note-area { 
-          background: rgba(0,0,0,0.05); 
-          border: 2px dashed #2A2A2A; 
-          border-radius: 15px; 
-          padding: 20px; 
+        .note-field { 
+          background: rgba(0,0,0,0.04); 
+          border: 3px dashed #2A2A2A; 
+          border-radius: 20px; 
+          padding: 25px; 
           height: 100%; 
           width: 100%; 
           resize: none; 
           font-family: inherit;
           color: #2A2A2A;
           font-weight: 700;
+          font-size: 16px;
           outline: none;
+        }
+
+        .close-hint {
+          margin-top: 20px;
+          text-align: center;
+          font-size: 12px;
+          font-weight: 900;
+          opacity: 0.6;
+          text-transform: uppercase;
         }
       `}</style>
 
-      <div className="header-container">
-        <h1 className="header-title">Кино Архив</h1>
-      </div>
+      <h1 className="title-main">Кино Архив</h1>
 
-      <div className="control-panel">
-        <input className="filter-item" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
-        <select className="filter-item" onChange={e => setSelectedGenre(e.target.value)}>
+      <div className="filter-bar">
+        <input className="select-custom" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
+        <select className="select-custom" onChange={e => setSelectedGenre(e.target.value)}>
           {categories.genres.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select className="filter-item" onChange={e => setYearFilter(e.target.value)}>
+        <select className="select-custom" onChange={e => setYearFilter(e.target.value)}>
           <option value="ВСЕ ГОДА">ГОД</option>
           {categories.years.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
-        <select className="filter-item" onChange={e => setRatingFilter(e.target.value)}>
+        <select className="select-custom" onChange={e => setRatingFilter(e.target.value)}>
           <option value="ВСЕ ОЦЕНКИ">РЕЙТИНГ</option>
           {categories.ratings.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select className="filter-item" style={{backgroundColor: '#A67575', color: 'white'}} onChange={e => setStatusFilter(e.target.value)}>
+        <select className="select-custom" style={{backgroundColor: '#A67575', color: 'white'}} onChange={e => setStatusFilter(e.target.value)}>
           <option value="ВСЕ">СТАТУС: ВСЕ</option>
           <option value="СМОТРЕЛИ">СМОТРЕЛИ</option>
           <option value="В ОЧЕРЕДИ">В ОЧЕРЕДИ</option>
         </select>
       </div>
 
-      <div className="movie-grid">
+      <div className="cards-grid">
         {filtered.map((m, i) => (
-          <div key={i} className={`flip-card ${flipped[i] ? 'is-flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
+          <div key={i} className={`card-item ${flipped[i] ? 'flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
             
             {/* FRONT */}
-            <div className={`card-face face-front ${m.isWatched ? 'is-watched' : 'is-queue'}`}>
-              <div className="movie-status">
+            <div className={`card-side front-side ${m.isWatched ? 'watched' : 'queue'}`}>
+              <div className="status-text">
                 {m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}
               </div>
               
-              <h2 className="movie-title">{m.title}</h2>
-              <div className="movie-meta">{m.genre} • {m.year}</div>
-              <p className="movie-desc">{m.desc || 'Описание готовится...'}</p>
+              <h2 className="movie-name">{m.title}</h2>
+              <div className="movie-details">{m.genre} • {m.year}</div>
+              <p className="movie-bio">{m.desc || 'Описание отсутствует...'}</p>
               
-              <div className="rating-block">
-                <div className="rating-label">РЕЙТИНГ</div>
-                <div className="rating-score">{m.rating || '—'}</div>
-              </div>
+              <div style={{fontSize:'12px', fontWeight:900, color:'#F2C94C', opacity:0.6, marginBottom:'5px'}}>РЕЙТИНГ</div>
+              <div className="rating-num">{m.rating || '—'}</div>
             </div>
 
             {/* BACK */}
-            <div className="card-face face-back" onClick={(e) => e.stopPropagation()}>
-              <div style={{fontWeight: 900, marginBottom: '15px', textTransform: 'uppercase'}}>Мои мысли:</div>
+            <div className="card-side back-side" onClick={(e) => e.stopPropagation()}>
+              <div style={{fontWeight: 900, fontSize: '18px', marginBottom: '20px'}}>МОИ МЫСЛИ:</div>
               <textarea 
-                className="note-area" 
+                className="note-field" 
                 placeholder="Что ты думаешь об этом фильме?"
                 value={notes[m.title] || ''}
                 onChange={(e) => {
@@ -300,8 +294,8 @@ export default function MovieArchive() {
                   localStorage.setItem('movie_notes', JSON.stringify(newNotes));
                 }}
               />
-              <div style={{marginTop: '20px', textAlign: 'center', fontSize: '11px', fontWeight: 900, opacity: 0.6}}>
-                [ НАЖМИ, ЧТОБЫ ЗАКРЫТЬ ]
+              <div className="close-hint" onClick={() => setFlipped({...flipped, [i]: false})}>
+                [ Нажми, чтобы закрыть ]
               </div>
             </div>
 
