@@ -40,19 +40,19 @@ export default function MovieArchive() {
                 return k ? row[k] : '';
               };
               
-              const rawStatus = String(find(['статус', 'status'])).toLowerCase();
               const rawRating = String(find(['рейтинг', 'rating', 'оценка']));
+              const rawStatus = String(find(['статус', 'status'])).toLowerCase();
               
-              // ЕСЛИ ЕСТЬ ЛЮБАЯ ЦИФРА В РЕЙТИНГЕ ИЛИ СЛОВО "СМОТРЕЛИ" -> КАРТОЧКА РОЗОВАЯ
-              const hasRating = /\d/.test(rawRating); 
-              const isWatchedText = rawStatus.includes('смотр') || rawStatus.includes('да') || rawStatus.includes('watch');
-              
+              // ЖЕЛЕЗНАЯ ЛОГИКА: Если есть цифра в рейтинге ИЛИ статус содержит "смотр" -> Watched
+              const hasDigit = /\d/.test(rawRating);
+              const isWatched = hasDigit || rawStatus.includes('смотр') || rawStatus.includes('да');
+
               return {
                 title: find(['название', 'title']),
                 genre: find(['жанр', 'genre']) || 'Кино',
                 desc: find(['описание', 'description']),
                 year: String(find(['год', 'year'])),
-                isWatched: hasRating || isWatchedText,
+                isWatched: isWatched,
                 rating: rawRating || '—'
               };
             }).filter((m: Movie) => m.title);
@@ -76,7 +76,7 @@ export default function MovieArchive() {
     });
   }, [movies, search, genreFilter, yearFilter, statusFilter]);
 
-  if (loading) return <div className="loader">СИНХРОНИЗАЦИЯ С БАЗОЙ...</div>;
+  if (loading) return <div className="loader">ОБНОВЛЯЮ ЦВЕТА...</div>;
 
   return (
     <div className="app">
@@ -85,46 +85,29 @@ export default function MovieArchive() {
           --olive: #8C9B81; --sand: #EAD9A6; --rose: #A67575; --green: #7A9680; --yellow: #F2C94C; --dark: #2D2926;
         }
         * { box-sizing: border-box; }
-        html, body { 
-          margin: 0; padding: 0; background-color: var(--olive) !important; 
-          height: 100%; width: 100%; font-family: sans-serif;
-        }
-        
+        html, body { margin: 0; padding: 0; background-color: var(--olive) !important; height: 100%; width: 100%; font-family: sans-serif; }
         .app { display: flex; width: 100vw; height: 100vh; background: var(--olive); }
-        
         .main { flex: 0 0 70%; height: 100vh; overflow-y: auto; padding: 40px; border-right: 4px solid var(--dark); }
         .side { flex: 0 0 30%; background: var(--sand); height: 100vh; overflow-y: auto; padding: 30px; }
-
         .h1 { font-size: 60px; font-weight: 900; text-transform: uppercase; color: var(--dark); margin: 0 0 30px 0; letter-spacing: -3px; }
         
-        /* ФИЛЬТРЫ 1 К 1 НАД КАРТОЧКАМИ */
-        .filter-container { 
-          display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 40px;
-        }
+        .filter-container { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 40px; }
         .filter-selectors { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        
-        .ui-el { 
-          width: 100%; background: var(--sand); border: 3px solid var(--dark); 
-          padding: 15px; border-radius: 14px; font-weight: 800; color: var(--dark); outline: none; font-size: 14px;
-        }
+        .ui-el { width: 100%; background: var(--sand); border: 3px solid var(--dark); padding: 15px; border-radius: 14px; font-weight: 800; color: var(--dark); outline: none; font-size: 14px; }
 
-        /* СЕТКА 2x2 */
         .movie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        
         .scene { height: 460px; perspective: 1500px; }
         .card { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); transform-style: preserve-3d; cursor: pointer; }
         .scene.flipped .card { transform: rotateY(180deg); }
 
-        .face { 
-          position: absolute; width: 100%; height: 100%; backface-visibility: hidden; 
-          border-radius: 30px; border: 4px solid var(--dark); padding: 35px; 
-          display: flex; flex-direction: column; 
-        }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 30px; border: 4px solid var(--dark); padding: 35px; display: flex; flex-direction: column; }
         
-        .face.front.watched { background: var(--rose); } /* СМОТРЕЛИ */
-        .face.front.queue { background: var(--green); }   /* В ОЧЕРЕДИ */
-        .face.back { background: var(--sand); transform: rotateY(180deg); border-style: dashed; }
+        /* ГЛАВНОЕ ИСПРАВЛЕНИЕ ТУТ */
+        .face.front { transition: background 0.3s ease; }
+        .is-watched-bg { background: var(--rose) !important; }
+        .is-queue-bg { background: var(--green) !important; }
 
+        .face.back { background: var(--sand); transform: rotateY(180deg); border-style: dashed; }
         .m-status { font-size: 11px; font-weight: 900; color: var(--yellow); text-transform: uppercase; margin-bottom: 10px; }
         .m-title { font-size: 32px; font-weight: 900; color: var(--yellow); text-transform: uppercase; line-height: 0.9; margin: 5px 0 15px 0; }
         .m-meta { font-size: 13px; font-weight: 700; color: var(--yellow); opacity: 0.8; margin-bottom: 20px; }
@@ -162,7 +145,8 @@ export default function MovieArchive() {
           {filtered.map((m, i) => (
             <div key={i} className={`scene ${flipped[i] ? 'flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
               <div className="card">
-                <div className={`face front ${m.isWatched ? 'watched' : 'queue'}`}>
+                {/* Теперь класс фона привязан напрямую к m.isWatched */}
+                <div className={`face front ${m.isWatched ? 'is-watched-bg' : 'is-queue-bg'}`}>
                   <div className="m-status">{m.isWatched ? '● ПРОСМОТРЕНО' : '○ В ОЧЕРЕДИ'}</div>
                   <div className="m-title">{m.title}</div>
                   <div className="m-meta">{m.genre} • {m.year}</div>
