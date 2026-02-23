@@ -7,7 +7,6 @@ export default function MovieArchive() {
   const [notes, setNotes] = useState<{[key: string]: string}>({});
   const [flipped, setFlipped] = useState<{[key: number]: boolean}>({});
   const [search, setSearch] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('ВСЕ ЖАНРЫ');
   const [statusFilter, setStatusFilter] = useState('ВСЕ');
   const [loading, setLoading] = useState(true);
 
@@ -52,95 +51,233 @@ export default function MovieArchive() {
   if (loading) return <div className="loader">ЗАГРУЗКА...</div>;
 
   return (
-    <div className="app-container">
+    <div className="app-layout">
       <style>{`
         :root {
-          --bg-olive: #8C9B81;
-          --dark-text: #2A241F; /* Темный кофейный вместо черного */
-          --accent-sand: #EAD9A6;
-          --card-watched: #946363; /* Более насыщенный розово-коричневый */
-          --card-queue: #6B8571;   /* Глубокий зеленый */
-          --yellow-text: #F2C94C;
+          --color-bg: #8C9B81;
+          --color-sand: #EAD9A6;
+          --color-green: #7A9680;
+          --color-rose: #A67575;
+          --color-yellow: #F2C94C;
+          --color-dark: #2D2926; /* Замена черному */
         }
 
-        body { margin: 0; background-color: var(--bg-olive) !important; color: var(--dark-text); font-family: 'Inter', sans-serif; }
-        
-        .app-container { display: flex; min-height: 100vh; }
+        html, body {
+          background-color: var(--color-bg) !important;
+          margin: 0;
+          padding: 0;
+          font-family: 'Inter', -apple-system, sans-serif;
+          color: var(--color-dark);
+        }
 
-        /* ОСНОВНАЯ ЧАСТЬ */
-        .main-view { flex: 1; padding: 40px; max-width: calc(100% - 380px); }
+        .app-layout {
+          display: flex;
+          min-height: 100vh;
+          overflow-x: hidden;
+        }
+
+        /* ОСНОВНОЙ КОНТЕНТ */
+        .content-area {
+          flex: 1;
+          padding: 40px;
+          max-width: calc(100% - 350px);
+        }
 
         /* ЛЕНТА ЗАМЕТОК */
-        .sidebar-notes { 
-          width: 380px; background: var(--accent-sand); 
-          border-left: 5px solid var(--dark-text); padding: 35px;
-          height: 100vh; position: sticky; top: 0; overflow-y: auto;
-        }
-        .sidebar-notes h2 { text-transform: uppercase; border-bottom: 3px solid var(--dark-text); padding-bottom: 15px; margin-bottom: 25px; font-weight: 900; }
-        .note-preview { margin-bottom: 20px; font-size: 14px; border-bottom: 1px dashed var(--dark-text); padding-bottom: 10px; }
-        .note-preview b { display: block; color: var(--card-watched); text-transform: uppercase; margin-bottom: 4px; }
-
-        .header-title { font-size: 80px; font-weight: 900; text-transform: uppercase; letter-spacing: -4px; margin: 0 0 40px 0; }
-
-        .search-box { 
-          background: var(--accent-sand); border: 3px solid var(--dark-text); 
-          padding: 15px 25px; border-radius: 15px; font-weight: 900; 
-          margin-bottom: 50px; width: 300px; outline: none;
+        .notes-sidebar {
+          width: 350px;
+          background-color: var(--color-sand);
+          border-left: 4px solid var(--color-dark);
+          padding: 30px;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          overflow-y: auto;
+          box-shadow: -5px 0 15px rgba(0,0,0,0.1);
         }
 
-        .movie-grid { 
-          display: grid; 
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
-          gap: 45px; 
+        .sidebar-header {
+          font-weight: 900;
+          text-transform: uppercase;
+          font-size: 20px;
+          margin-bottom: 25px;
+          border-bottom: 2px solid var(--color-dark);
+          padding-bottom: 10px;
+        }
+
+        .sidebar-note {
+          margin-bottom: 20px;
+          font-size: 14px;
+          line-height: 1.4;
+          padding-bottom: 15px;
+          border-bottom: 1px dashed rgba(0,0,0,0.2);
+        }
+
+        .sidebar-note b {
+          display: block;
+          color: var(--color-rose);
+          text-transform: uppercase;
+          margin-bottom: 5px;
+        }
+
+        /* ЗАГОЛОВОК И ПОИСК */
+        .archive-header {
+          font-size: clamp(35px, 8vw, 75px);
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: -2px;
+          margin-bottom: 30px;
+        }
+
+        .filters-row {
+          display: flex;
+          gap: 15px;
+          margin-bottom: 50px;
+          flex-wrap: wrap;
+        }
+
+        .input-box {
+          background-color: var(--color-sand) !important;
+          border: 3px solid var(--color-dark);
+          padding: 15px 20px;
+          border-radius: 12px;
+          font-weight: 800;
+          color: var(--color-dark);
+          outline: none;
+          font-size: 14px;
+        }
+
+        /* СЕТКА КАРТОЧЕК */
+        .movie-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 40px;
           align-items: start;
         }
 
-        /* КАРТОЧКА БЕЗ НАПЛЫВОВ */
-        .flip-box { height: 480px; perspective: 1500px; }
-        .flip-inner { 
-          position: relative; width: 100%; height: 100%; 
-          transition: transform 0.6s; transform-style: preserve-3d; 
-        }
-        .flip-box.is-flipped .flip-inner { transform: rotateY(180deg); }
-
-        .card-face { 
-          position: absolute; width: 100%; height: 100%; 
-          backface-visibility: hidden; border-radius: 30px; padding: 35px;
-          border: 4px solid var(--dark-text); box-sizing: border-box;
-          display: flex; flex-direction: column;
+        /* КОНТЕЙНЕР КАРТОЧКИ */
+        .card-container {
+          height: 480px;
+          perspective: 1500px;
+          position: relative;
         }
 
-        .front-face.watched { background-color: var(--card-watched); color: var(--yellow-text); }
-        .front-face.queue { background-color: var(--card-queue); color: var(--yellow-text); }
-        .back-face { background-color: var(--accent-sand); transform: rotateY(180deg); color: var(--dark-text); }
+        .card-inner {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+          transform-style: preserve-3d;
+        }
 
-        .title { font-size: 30px; font-weight: 900; line-height: 1; margin: 15px 0; text-transform: uppercase; }
-        .meta { font-size: 13px; font-weight: 800; opacity: 0.8; margin-bottom: 20px; }
-        .description { font-size: 14px; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; }
+        .card-container.is-flipped .card-inner {
+          transform: rotateY(180deg);
+        }
+
+        .card-face {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          backface-visibility: hidden;
+          border-radius: 25px;
+          padding: 30px;
+          display: flex;
+          flex-direction: column;
+          border: 3px solid var(--color-dark);
+          box-shadow: 10px 10px 0px rgba(0,0,0,0.1);
+          box-sizing: border-box;
+        }
+
+        .face-front.watched { background-color: var(--color-rose) !important; }
+        .face-front.queue { background-color: var(--color-green) !important; }
         
-        .rating-bottom { margin-top: auto; font-size: 55px; font-weight: 900; letter-spacing: -3px; }
-
-        .note-editor { 
-          flex: 1; background: rgba(0,0,0,0.05); border: 2px dashed var(--dark-text); 
-          border-radius: 15px; padding: 15px; resize: none; font-family: inherit; font-weight: 700;
+        .face-back {
+          background-color: var(--color-sand) !important;
+          transform: rotateY(180deg);
+          color: var(--color-dark);
         }
 
-        @media (max-width: 1100px) {
-          .app-container { flex-direction: column; }
-          .main-view { max-width: 100%; }
-          .sidebar-notes { width: 100%; height: auto; border-left: none; border-top: 5px solid var(--dark-text); }
+        .movie-status {
+          font-size: 11px;
+          font-weight: 900;
+          margin-bottom: 15px;
+          color: var(--color-yellow);
+          text-transform: uppercase;
         }
 
-        .loader { height: 100vh; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 30px; }
+        .movie-title {
+          font-size: 28px;
+          font-weight: 900;
+          line-height: 1.1;
+          margin-bottom: 10px;
+          color: var(--color-yellow);
+          text-transform: uppercase;
+        }
+
+        .movie-meta {
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--color-yellow);
+          margin-bottom: 15px;
+          opacity: 0.9;
+        }
+
+        .movie-desc {
+          font-size: 14px;
+          line-height: 1.5;
+          color: var(--color-yellow);
+          display: -webkit-box;
+          -webkit-line-clamp: 5;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+
+        .rating-display {
+          margin-top: auto;
+          font-size: 55px;
+          font-weight: 900;
+          color: var(--color-yellow);
+          letter-spacing: -3px;
+        }
+
+        .note-textarea {
+          flex: 1;
+          background: rgba(0,0,0,0.05);
+          border: 2px dashed var(--color-dark);
+          border-radius: 15px;
+          padding: 15px;
+          resize: none;
+          font-family: inherit;
+          font-weight: 700;
+          color: var(--color-dark);
+          outline: none;
+        }
+
+        @media (max-width: 1024px) {
+          .app-layout { flex-direction: column; }
+          .content-area { max-width: 100%; padding: 20px; }
+          .notes-sidebar { width: 100%; height: auto; border-left: none; border-top: 4px solid var(--color-dark); position: static; }
+        }
+
+        .loader { 
+          height: 100vh; 
+          background: var(--color-bg); 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          font-weight: 900; 
+        }
       `}</style>
 
-      <main className="main-view">
-        <h1 className="header-title">Кино Архив</h1>
+      {/* ОСНОВНОЙ БЛОК */}
+      <main className="content-area">
+        <h1 className="archive-header">Кино Архив</h1>
         
-        <div style={{display: 'flex', gap: '20px'}}>
-          <input className="search-box" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
-          <select className="search-box" style={{width: '200px'}} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="ВСЕ">СТАТУС: ВСЕ</option>
+        <div className="filters-row">
+          <input className="input-box" style={{width: '250px'}} placeholder="ПОИСК ПО НАЗВАНИЮ..." onChange={e => setSearch(e.target.value)} />
+          <select className="input-box" onChange={e => setStatusFilter(e.target.value)}>
+            <option value="ВСЕ">ВСЕ ФИЛЬМЫ</option>
             <option value="СМОТРЕЛИ">СМОТРЕЛИ</option>
             <option value="В ОЧЕРЕДИ">В ОЧЕРЕДИ</option>
           </select>
@@ -148,30 +285,37 @@ export default function MovieArchive() {
 
         <div className="movie-grid">
           {filtered.map((m, i) => (
-            <div key={i} className={`flip-box ${flipped[i] ? 'is-flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
-              <div className="flip-inner">
-                {/* ПЕРЕД */}
-                <div className={`card-face front-face ${m.isWatched ? 'watched' : 'queue'}`}>
-                  <div style={{fontSize:'11px', fontWeight:900}}>
-                    {m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}
+            <div 
+              key={i} 
+              className={`card-container ${flipped[i] ? 'is-flipped' : ''}`} 
+              onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}
+            >
+              <div className="card-inner">
+                {/* ЛИЦЕВАЯ СТОРОНА */}
+                <div className={`card-face face-front ${m.isWatched ? 'watched' : 'queue'}`}>
+                  <div className="movie-status">
+                    {m.isWatched ? '● ПРОСМОТРЕНО' : '○ В ОЧЕРЕДИ'}
                   </div>
-                  <div className="title">{m.title}</div>
-                  <div className="meta">{m.genre} • {m.year}</div>
-                  <div className="description">{m.desc}</div>
-                  <div className="rating-bottom">{m.rating || '—'}</div>
+                  <div className="movie-title">{m.title}</div>
+                  <div className="movie-meta">{m.genre} • {m.year}</div>
+                  <div className="movie-desc">{m.desc}</div>
+                  <div className="rating-display">{m.rating || '—'}</div>
                 </div>
 
-                {/* ЗАД */}
-                <div className="card-face back-face" onClick={e => e.stopPropagation()}>
-                  <div style={{fontWeight:900, marginBottom:'15px'}}>МОИ ЗАМЕТКИ:</div>
+                {/* ОБРАТНАЯ СТОРОНА */}
+                <div className="card-face face-back" onClick={e => e.stopPropagation()}>
+                  <div style={{fontWeight: 900, marginBottom: '15px', textTransform: 'uppercase'}}>Мысли о фильме:</div>
                   <textarea 
-                    className="note-editor"
+                    className="note-textarea"
                     value={notes[m.title] || ''}
-                    placeholder="Напишите что-нибудь..."
+                    placeholder="Напишите заметку..."
                     onChange={(e) => saveNote(m.title, e.target.value)}
                   />
-                  <div style={{marginTop:'15px', textAlign:'center', fontSize:'11px', fontWeight:900}} onClick={() => setFlipped({...flipped, [i]: false})}>
-                    [ ЗАКРЫТЬ ]
+                  <div 
+                    style={{marginTop: '15px', textAlign: 'center', fontSize: '11px', fontWeight: 900, cursor: 'pointer'}} 
+                    onClick={() => setFlipped({...flipped, [i]: false})}
+                  >
+                    [ ВЕРНУТЬ КАРТОЧКУ ]
                   </div>
                 </div>
               </div>
@@ -180,16 +324,21 @@ export default function MovieArchive() {
         </div>
       </main>
 
-      <aside className="sidebar-notes">
-        <h2>Лента заметок</h2>
-        {Object.entries(notes).map(([title, text]) => (
-          text && (
-            <div key={title} className="note-preview">
-              <b>{title}</b>
-              {text}
-            </div>
-          )
-        ))}
+      {/* БОКОВАЯ ПАНЕЛЬ */}
+      <aside className="notes-sidebar">
+        <div className="sidebar-header">Лента заметок</div>
+        {Object.entries(notes).length === 0 ? (
+          <p style={{opacity: 0.5}}>Пока нет ни одной заметки...</p>
+        ) : (
+          Object.entries(notes).map(([title, text]) => (
+            text.trim() && (
+              <div key={title} className="sidebar-note">
+                <b>{title}</b>
+                {text}
+              </div>
+            )
+          ))
+        )}
       </aside>
     </div>
   );
