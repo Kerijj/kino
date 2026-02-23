@@ -39,14 +39,22 @@ export default function MovieArchive() {
                 const k = Object.keys(row).find(key => keys.includes(key.trim().toLowerCase()));
                 return k ? row[k] : '';
               };
-              const status = String(find(['статус', 'status'])).toLowerCase();
+              
+              // УЛЬТРА-ПРОВЕРКА СТАТУСА (ищет любые совпадения)
+              const statusValue = String(find(['статус', 'status', 'просмотрено'])).toLowerCase().trim();
+              const isWatched = statusValue.includes('смотр') || 
+                                statusValue.includes('да') || 
+                                statusValue === '1' || 
+                                statusValue.includes('watch') ||
+                                statusValue.includes('done');
+
               return {
-                title: find(['название', 'title']),
+                title: find(['название', 'title', 'фильм']),
                 genre: find(['жанр', 'genre']) || 'Кино',
                 desc: find(['описание', 'description']),
                 year: String(find(['год', 'year'])),
-                isWatched: status.includes('смотр') || status.includes('да') || status.includes('watch'),
-                rating: find(['рейтинг', 'rating']) || '—'
+                isWatched: isWatched, // Теперь цвета будут работать правильно
+                rating: find(['рейтинг', 'rating', 'оценка']) || '—'
               };
             }).filter((m: Movie) => m.title);
             setMovies(parsed);
@@ -69,7 +77,7 @@ export default function MovieArchive() {
     });
   }, [movies, search, genreFilter, yearFilter, statusFilter]);
 
-  if (loading) return <div className="loader">ЗАГРУЗКА...</div>;
+  if (loading) return <div className="loader">ЗАГРУЗКА БАЗЫ...</div>;
 
   return (
     <div className="app">
@@ -78,30 +86,36 @@ export default function MovieArchive() {
           --olive: #8C9B81; --sand: #EAD9A6; --rose: #A67575; --green: #7A9680; --yellow: #F2C94C; --dark: #2D2926;
         }
         * { box-sizing: border-box; }
-        body { margin: 0; background: var(--olive) !important; font-family: 'Inter', sans-serif; }
+        html, body { 
+          margin: 0; padding: 0; 
+          background-color: var(--olive) !important; 
+          height: 100%; width: 100%;
+        }
         
         .app { display: flex; width: 100vw; height: 100vh; background: var(--olive); }
         
+        /* ЛЕВАЯ ЧАСТЬ */
         .main { flex: 0 0 70%; height: 100vh; overflow-y: auto; padding: 40px; border-right: 4px solid var(--dark); }
+        
+        /* ПРАВАЯ ЧАСТЬ (ЗАМЕТКИ) */
         .side { flex: 0 0 30%; background: var(--sand); height: 100vh; overflow-y: auto; padding: 30px; }
 
         .h1 { font-size: 55px; font-weight: 900; text-transform: uppercase; color: var(--dark); margin: 0 0 25px 0; letter-spacing: -3px; }
         
-        /* ФИЛЬТРЫ В СЕТКЕ */
+        /* ФИЛЬТРЫ: СТРОГО НАД КАРТОЧКАМИ */
         .filter-grid { 
           display: grid; 
-          grid-template-columns: 1fr 1fr; 
-          gap: 15px; 
-          margin-bottom: 35px;
-          max-width: 100%;
+          grid-template-columns: 1fr 1fr; /* Две колонки как у карточек */
+          gap: 20px; 
+          margin-bottom: 40px;
         }
-        .filter-group { display: flex; gap: 10px; }
+        .filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .ui-el { 
           width: 100%; background: var(--sand); border: 3px solid var(--dark); 
-          padding: 14px; border-radius: 12px; font-weight: 800; color: var(--dark); outline: none;
+          padding: 14px; border-radius: 12px; font-weight: 800; color: var(--dark); outline: none; font-size: 13px;
         }
 
-        /* КАРТОЧКИ 2x2 */
+        /* СЕТКА КАРТОЧЕК 2x2 */
         .movie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
         
         .scene { height: 440px; perspective: 1200px; }
@@ -114,16 +128,16 @@ export default function MovieArchive() {
           display: flex; flex-direction: column; 
         }
         
-        /* Цвета статусов */
-        .face.front.watched { background: var(--rose); }
-        .face.front.queue { background: var(--green); }
+        /* ЦВЕТА КАРТОЧЕК */
+        .face.front.watched { background: var(--rose); } /* СМОТРЕЛИ - РОЗОВЫЙ */
+        .face.front.queue { background: var(--green); }   /* В ОЧЕРЕДИ - ЗЕЛЕНЫЙ */
         .face.back { background: var(--sand); transform: rotateY(180deg); }
 
         .m-badge { font-size: 10px; font-weight: 900; color: var(--yellow); text-transform: uppercase; margin-bottom: 8px; }
-        .m-title { font-size: 30px; font-weight: 900; color: var(--yellow); text-transform: uppercase; line-height: 1; margin: 10px 0; }
-        .m-meta { font-size: 13px; font-weight: 700; color: var(--yellow); opacity: 0.9; margin-bottom: 15px; }
-        .m-desc { font-size: 15px; line-height: 1.4; color: var(--yellow); display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
-        .m-rating { margin-top: auto; font-size: 50px; font-weight: 900; color: var(--yellow); letter-spacing: -2px; }
+        .m-title { font-size: 28px; font-weight: 900; color: var(--yellow); text-transform: uppercase; line-height: 1; margin: 10px 0; }
+        .m-meta { font-size: 12px; font-weight: 700; color: var(--yellow); opacity: 0.9; margin-bottom: 15px; }
+        .m-desc { font-size: 14px; line-height: 1.4; color: var(--yellow); display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+        .m-rating { margin-top: auto; font-size: 45px; font-weight: 900; color: var(--yellow); letter-spacing: -2px; }
 
         .side-title { font-size: 24px; font-weight: 900; text-transform: uppercase; border-bottom: 4px solid var(--dark); padding-bottom: 10px; margin-bottom: 25px; }
         .note-block { margin-bottom: 20px; border-bottom: 1px dashed var(--dark); padding-bottom: 12px; }
@@ -136,15 +150,16 @@ export default function MovieArchive() {
       <div className="main">
         <h1 className="h1">Кино Архив</h1>
         
+        {/* ФИЛЬТРЫ РОВНО НАД КАРТОЧКАМИ */}
         <div className="filter-grid">
-          <input className="ui-el" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
-          <div className="filter-group">
+          <input className="ui-el" placeholder="ПОИСК ПО НАЗВАНИЮ..." onChange={e => setSearch(e.target.value)} />
+          <div className="filter-row">
             <select className="ui-el" onChange={e => setGenreFilter(e.target.value)}>
-              <option value="ALL">ЖАНРЫ</option>
+              <option value="ALL">ЖАНР</option>
               {genres.map(g => g !== 'ALL' && <option key={g} value={g}>{g.toUpperCase()}</option>)}
             </select>
             <select className="ui-el" onChange={e => setYearFilter(e.target.value)}>
-              <option value="ALL">ГОДЫ</option>
+              <option value="ALL">ГОД</option>
               {years.map(y => y !== 'ALL' && <option key={y} value={y}>{y}</option>)}
             </select>
             <select className="ui-el" onChange={e => setStatusFilter(e.target.value)}>
@@ -159,7 +174,7 @@ export default function MovieArchive() {
           {filtered.map((m, i) => (
             <div key={i} className={`scene ${flipped[i] ? 'flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
               <div className="card">
-                {/* ЛИЦЕВАЯ СТОРОНА */}
+                {/* ЛИЦО: РОЗОВОЕ (СМОТРЕЛИ) ИЛИ ЗЕЛЕНОЕ (В ОЧЕРЕДИ) */}
                 <div className={`face front ${m.isWatched ? 'watched' : 'queue'}`}>
                   <div className="m-badge">{m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}</div>
                   <div className="m-title">{m.title}</div>
@@ -168,13 +183,12 @@ export default function MovieArchive() {
                   <div className="m-rating">{m.rating}</div>
                 </div>
 
-                {/* ОБРАТНАЯ СТОРОНА */}
                 <div className="face back" onClick={e => e.stopPropagation()}>
-                  <div style={{fontWeight: 900, marginBottom: '10px', fontSize: '14px'}}>ЗАМЕТКИ:</div>
+                  <div style={{fontWeight: 900, marginBottom: '10px', fontSize: '14px'}}>МОИ МЫСЛИ:</div>
                   <textarea 
                     className="note-input"
                     value={notes[m.title] || ''}
-                    placeholder="Напишите мысли..."
+                    placeholder="Что ты думаешь об этом фильме?"
                     onChange={(e) => {
                       const n = { ...notes, [m.title]: e.target.value };
                       setNotes(n);
@@ -182,7 +196,7 @@ export default function MovieArchive() {
                     }}
                   />
                   <div style={{marginTop: '12px', textAlign: 'center', fontSize: '10px', fontWeight: 900}} onClick={() => setFlipped({...flipped, [i]: false})}>
-                    [ ЗАКРЫТЬ КАРТОЧКУ ]
+                    [ НАЖМИ, ЧТОБЫ ЗАКРЫТЬ ]
                   </div>
                 </div>
               </div>
