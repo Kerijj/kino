@@ -40,21 +40,20 @@ export default function MovieArchive() {
                 return k ? row[k] : '';
               };
               
-              // УЛЬТРА-ПРОВЕРКА СТАТУСА (ищет любые совпадения)
-              const statusValue = String(find(['статус', 'status', 'просмотрено'])).toLowerCase().trim();
-              const isWatched = statusValue.includes('смотр') || 
-                                statusValue.includes('да') || 
-                                statusValue === '1' || 
-                                statusValue.includes('watch') ||
-                                statusValue.includes('done');
-
+              const rawStatus = String(find(['статус', 'status'])).toLowerCase();
+              const rawRating = String(find(['рейтинг', 'rating', 'оценка']));
+              
+              // ЕСЛИ ЕСТЬ ЛЮБАЯ ЦИФРА В РЕЙТИНГЕ ИЛИ СЛОВО "СМОТРЕЛИ" -> КАРТОЧКА РОЗОВАЯ
+              const hasRating = /\d/.test(rawRating); 
+              const isWatchedText = rawStatus.includes('смотр') || rawStatus.includes('да') || rawStatus.includes('watch');
+              
               return {
-                title: find(['название', 'title', 'фильм']),
+                title: find(['название', 'title']),
                 genre: find(['жанр', 'genre']) || 'Кино',
                 desc: find(['описание', 'description']),
                 year: String(find(['год', 'year'])),
-                isWatched: isWatched, // Теперь цвета будут работать правильно
-                rating: find(['рейтинг', 'rating', 'оценка']) || '—'
+                isWatched: hasRating || isWatchedText,
+                rating: rawRating || '—'
               };
             }).filter((m: Movie) => m.title);
             setMovies(parsed);
@@ -77,7 +76,7 @@ export default function MovieArchive() {
     });
   }, [movies, search, genreFilter, yearFilter, statusFilter]);
 
-  if (loading) return <div className="loader">ЗАГРУЗКА БАЗЫ...</div>;
+  if (loading) return <div className="loader">СИНХРОНИЗАЦИЯ С БАЗОЙ...</div>;
 
   return (
     <div className="app">
@@ -87,73 +86,62 @@ export default function MovieArchive() {
         }
         * { box-sizing: border-box; }
         html, body { 
-          margin: 0; padding: 0; 
-          background-color: var(--olive) !important; 
-          height: 100%; width: 100%;
+          margin: 0; padding: 0; background-color: var(--olive) !important; 
+          height: 100%; width: 100%; font-family: sans-serif;
         }
         
         .app { display: flex; width: 100vw; height: 100vh; background: var(--olive); }
         
-        /* ЛЕВАЯ ЧАСТЬ */
         .main { flex: 0 0 70%; height: 100vh; overflow-y: auto; padding: 40px; border-right: 4px solid var(--dark); }
-        
-        /* ПРАВАЯ ЧАСТЬ (ЗАМЕТКИ) */
         .side { flex: 0 0 30%; background: var(--sand); height: 100vh; overflow-y: auto; padding: 30px; }
 
-        .h1 { font-size: 55px; font-weight: 900; text-transform: uppercase; color: var(--dark); margin: 0 0 25px 0; letter-spacing: -3px; }
+        .h1 { font-size: 60px; font-weight: 900; text-transform: uppercase; color: var(--dark); margin: 0 0 30px 0; letter-spacing: -3px; }
         
-        /* ФИЛЬТРЫ: СТРОГО НАД КАРТОЧКАМИ */
-        .filter-grid { 
-          display: grid; 
-          grid-template-columns: 1fr 1fr; /* Две колонки как у карточек */
-          gap: 20px; 
-          margin-bottom: 40px;
+        /* ФИЛЬТРЫ 1 К 1 НАД КАРТОЧКАМИ */
+        .filter-container { 
+          display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 40px;
         }
-        .filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .filter-selectors { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        
         .ui-el { 
           width: 100%; background: var(--sand); border: 3px solid var(--dark); 
-          padding: 14px; border-radius: 12px; font-weight: 800; color: var(--dark); outline: none; font-size: 13px;
+          padding: 15px; border-radius: 14px; font-weight: 800; color: var(--dark); outline: none; font-size: 14px;
         }
 
-        /* СЕТКА КАРТОЧЕК 2x2 */
+        /* СЕТКА 2x2 */
         .movie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
         
-        .scene { height: 440px; perspective: 1200px; }
-        .card { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
+        .scene { height: 460px; perspective: 1500px; }
+        .card { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); transform-style: preserve-3d; cursor: pointer; }
         .scene.flipped .card { transform: rotateY(180deg); }
 
         .face { 
           position: absolute; width: 100%; height: 100%; backface-visibility: hidden; 
-          border-radius: 25px; border: 4px solid var(--dark); padding: 30px; 
+          border-radius: 30px; border: 4px solid var(--dark); padding: 35px; 
           display: flex; flex-direction: column; 
         }
         
-        /* ЦВЕТА КАРТОЧЕК */
-        .face.front.watched { background: var(--rose); } /* СМОТРЕЛИ - РОЗОВЫЙ */
-        .face.front.queue { background: var(--green); }   /* В ОЧЕРЕДИ - ЗЕЛЕНЫЙ */
-        .face.back { background: var(--sand); transform: rotateY(180deg); }
+        .face.front.watched { background: var(--rose); } /* СМОТРЕЛИ */
+        .face.front.queue { background: var(--green); }   /* В ОЧЕРЕДИ */
+        .face.back { background: var(--sand); transform: rotateY(180deg); border-style: dashed; }
 
-        .m-badge { font-size: 10px; font-weight: 900; color: var(--yellow); text-transform: uppercase; margin-bottom: 8px; }
-        .m-title { font-size: 28px; font-weight: 900; color: var(--yellow); text-transform: uppercase; line-height: 1; margin: 10px 0; }
-        .m-meta { font-size: 12px; font-weight: 700; color: var(--yellow); opacity: 0.9; margin-bottom: 15px; }
-        .m-desc { font-size: 14px; line-height: 1.4; color: var(--yellow); display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
-        .m-rating { margin-top: auto; font-size: 45px; font-weight: 900; color: var(--yellow); letter-spacing: -2px; }
+        .m-status { font-size: 11px; font-weight: 900; color: var(--yellow); text-transform: uppercase; margin-bottom: 10px; }
+        .m-title { font-size: 32px; font-weight: 900; color: var(--yellow); text-transform: uppercase; line-height: 0.9; margin: 5px 0 15px 0; }
+        .m-meta { font-size: 13px; font-weight: 700; color: var(--yellow); opacity: 0.8; margin-bottom: 20px; }
+        .m-desc { font-size: 15px; line-height: 1.4; color: var(--yellow); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        .m-rating-big { margin-top: auto; font-size: 50px; font-weight: 900; color: var(--yellow); letter-spacing: -2px; }
 
-        .side-title { font-size: 24px; font-weight: 900; text-transform: uppercase; border-bottom: 4px solid var(--dark); padding-bottom: 10px; margin-bottom: 25px; }
-        .note-block { margin-bottom: 20px; border-bottom: 1px dashed var(--dark); padding-bottom: 12px; }
-        .note-block b { color: var(--rose); font-size: 12px; display: block; text-transform: uppercase; margin-bottom: 4px; }
-        
-        .note-input { flex: 1; background: rgba(0,0,0,0.05); border: 2px dashed var(--dark); border-radius: 15px; padding: 15px; font-weight: 700; color: var(--dark); resize: none; outline: none; }
+        .note-input { width: 100%; flex: 1; background: rgba(0,0,0,0.03); border: 2px dashed var(--dark); border-radius: 20px; padding: 20px; font-weight: 700; color: var(--dark); resize: none; outline: none; margin: 15px 0; }
+        .side-title { font-size: 24px; font-weight: 900; text-transform: uppercase; border-bottom: 4px solid var(--dark); padding-bottom: 10px; margin-bottom: 25px; color: var(--dark); }
         .loader { height: 100vh; background: var(--olive); display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--dark); font-size: 24px; }
       `}</style>
 
       <div className="main">
-        <h1 className="h1">Кино Архив</h1>
+        <h1 className="h1">КИНО АРХИВ</h1>
         
-        {/* ФИЛЬТРЫ РОВНО НАД КАРТОЧКАМИ */}
-        <div className="filter-grid">
-          <input className="ui-el" placeholder="ПОИСК ПО НАЗВАНИЮ..." onChange={e => setSearch(e.target.value)} />
-          <div className="filter-row">
+        <div className="filter-container">
+          <input className="ui-el" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
+          <div className="filter-selectors">
             <select className="ui-el" onChange={e => setGenreFilter(e.target.value)}>
               <option value="ALL">ЖАНР</option>
               {genres.map(g => g !== 'ALL' && <option key={g} value={g}>{g.toUpperCase()}</option>)}
@@ -174,29 +162,28 @@ export default function MovieArchive() {
           {filtered.map((m, i) => (
             <div key={i} className={`scene ${flipped[i] ? 'flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
               <div className="card">
-                {/* ЛИЦО: РОЗОВОЕ (СМОТРЕЛИ) ИЛИ ЗЕЛЕНОЕ (В ОЧЕРЕДИ) */}
                 <div className={`face front ${m.isWatched ? 'watched' : 'queue'}`}>
-                  <div className="m-badge">{m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}</div>
+                  <div className="m-status">{m.isWatched ? '● ПРОСМОТРЕНО' : '○ В ОЧЕРЕДИ'}</div>
                   <div className="m-title">{m.title}</div>
                   <div className="m-meta">{m.genre} • {m.year}</div>
                   <div className="m-desc">{m.desc}</div>
-                  <div className="m-rating">{m.rating}</div>
+                  <div className="m-rating-big">{m.rating}</div>
                 </div>
 
                 <div className="face back" onClick={e => e.stopPropagation()}>
-                  <div style={{fontWeight: 900, marginBottom: '10px', fontSize: '14px'}}>МОИ МЫСЛИ:</div>
+                  <div style={{fontWeight: 900}}>ЗАМЕТКА:</div>
                   <textarea 
                     className="note-input"
                     value={notes[m.title] || ''}
-                    placeholder="Что ты думаешь об этом фильме?"
+                    placeholder="Напиши что-нибудь..."
                     onChange={(e) => {
                       const n = { ...notes, [m.title]: e.target.value };
                       setNotes(n);
                       localStorage.setItem('movie_notes_shared', JSON.stringify(n));
                     }}
                   />
-                  <div style={{marginTop: '12px', textAlign: 'center', fontSize: '10px', fontWeight: 900}} onClick={() => setFlipped({...flipped, [i]: false})}>
-                    [ НАЖМИ, ЧТОБЫ ЗАКРЫТЬ ]
+                  <div style={{textAlign: 'center', fontSize: '11px', fontWeight: 900, opacity: 0.6}} onClick={() => setFlipped({...flipped, [i]: false})}>
+                    КЛИКНИ, ЧТОБЫ ЗАКРЫТЬ
                   </div>
                 </div>
               </div>
@@ -206,11 +193,11 @@ export default function MovieArchive() {
       </div>
 
       <div className="side">
-        <h2 className="side-title">Лента заметок</h2>
+        <h2 className="side-title">Лента</h2>
         {Object.entries(notes).map(([title, text]) => text.trim() && (
-          <div key={title} className="note-block">
-            <b>{title}</b>
-            <div style={{fontSize: '14px', lineHeight: '1.4', color: 'var(--dark)'}}>{text}</div>
+          <div key={title} style={{marginBottom: '20px', borderBottom: '1px solid rgba(0,0,0,0.1)', paddingBottom: '12px'}}>
+            <div style={{color: 'var(--rose)', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase'}}>{title}</div>
+            <div style={{fontSize: '14px', fontWeight: 600, color: 'var(--dark)', marginTop: '4px'}}>{text}</div>
           </div>
         ))}
       </div>
