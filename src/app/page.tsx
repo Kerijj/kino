@@ -17,17 +17,15 @@ export default function MovieArchive() {
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
 
-  // Фильтры
   const [search, setSearch] = useState('');
   const [genreFilter, setGenreFilter] = useState('ALL');
   const [yearFilter, setYearFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   useEffect(() => {
-    const savedNotes = localStorage.getItem('shared_movie_notes');
+    const savedNotes = localStorage.getItem('movie_notes_shared');
     if (savedNotes) setNotes(JSON.parse(savedNotes));
 
-    // ТВОЯ ССЫЛКА НА ЭКСПОРТ (CSV)
     const csvUrl = "https://docs.google.com/spreadsheets/d/1pge7MWZuBDMc_3gRfNYwnwBUVDDMA-g3emCDbGlZFwc/export?format=csv";
     
     fetch(csvUrl)
@@ -38,105 +36,98 @@ export default function MovieArchive() {
           skipEmptyLines: true,
           complete: (res) => {
             const parsed = res.data.map((row: any) => {
-              // Авто-поиск полей (на случай если в таблице заголовки на русском или английском)
-              const getVal = (keys: string[]) => {
-                const foundKey = Object.keys(row).find(k => keys.includes(k.trim().toLowerCase()));
-                return foundKey ? row[foundKey] : '';
+              const find = (keys: string[]) => {
+                const k = Object.keys(row).find(key => keys.includes(key.trim().toLowerCase()));
+                return k ? row[k] : '';
               };
-
               return {
-                title: getVal(['название', 'title', 'фильм']),
-                genre: getVal(['жанр', 'genre']) || 'Кино',
-                desc: getVal(['описание', 'description']) || '',
-                year: getVal(['год', 'year']) || '',
-                isWatched: String(getVal(['статус', 'status'])).toLowerCase().includes('смотр'),
-                rating: getVal(['рейтинг', 'rating', 'оценка']) || '0'
+                title: find(['название', 'title', 'имя']),
+                genre: find(['жанр', 'genre']) || 'Кино',
+                desc: find(['описание', 'description', 'о чем']) || '',
+                year: String(find(['год', 'year']) || ''),
+                isWatched: String(find(['статус', 'status'])).toLowerCase().includes('смотр'),
+                rating: find(['рейтинг', 'rating', 'оценка']) || '—'
               };
-            }).filter((m: Movie) => m.title.length > 0);
-
+            }).filter((m: Movie) => m.title);
             setMovies(parsed);
             setLoading(false);
-          },
-          error: () => setLoading(false)
+          }
         });
-      })
-      .catch(() => setLoading(false));
+      });
   }, []);
 
-  // Формирование списков для выпадашек
-  const genres = useMemo(() => ['ALL', ...Array.from(new Set(movies.map(m => m.genre)))].filter(Boolean), [movies]);
-  const years = useMemo(() => ['ALL', ...Array.from(new Set(movies.map(m => m.year)))].filter(Boolean).sort((a,b) => b.localeCompare(a)), [movies]);
+  // Динамические списки для фильтров
+  const genres = useMemo(() => ['ALL', ...Array.from(new Set(movies.map(m => m.genre).filter(Boolean)))].sort(), [movies]);
+  const years = useMemo(() => ['ALL', ...Array.from(new Set(movies.map(m => m.year).filter(Boolean)))].sort((a,b) => b.localeCompare(a)), [movies]);
 
-  const filteredMovies = useMemo(() => {
+  const filtered = useMemo(() => {
     return movies.filter(m => {
-      const matchesSearch = m.title.toLowerCase().includes(search.toLowerCase());
-      const matchesGenre = genreFilter === 'ALL' || m.genre === genreFilter;
-      const matchesYear = yearFilter === 'ALL' || m.year === yearFilter;
-      const matchesStatus = statusFilter === 'ALL' || (statusFilter === 'WATCHED' ? m.isWatched : !m.isWatched);
-      return matchesSearch && matchesGenre && matchesYear && matchesStatus;
+      const matchSearch = m.title.toLowerCase().includes(search.toLowerCase());
+      const matchGenre = genreFilter === 'ALL' || m.genre === genreFilter;
+      const matchYear = yearFilter === 'ALL' || m.year === yearFilter;
+      const matchStatus = statusFilter === 'ALL' || (statusFilter === 'WATCHED' ? m.isWatched : !m.isWatched);
+      return matchSearch && matchGenre && matchYear && matchStatus;
     });
   }, [movies, search, genreFilter, yearFilter, statusFilter]);
 
-  if (loading) return <div style={{background:'#8C9B81', height:'100vh', display:'flex', justifyContent:'center', alignItems:'center', color:'#F2C94C', fontWeight:900}}>СИНХРОНИЗАЦИЯ С ТАБЛИЦЕЙ...</div>;
+  if (loading) return <div className="loader">ЗАГРУЗКА БАЗЫ...</div>;
 
   return (
-    <div className="app-container">
+    <div className="container">
       <style>{`
         :root {
-          --bg-olive: #8C9B81;
-          --ui-sand: #EAD9A6;
-          --card-green: #7A9680;
-          --card-rose: #A67575;
-          --text-yellow: #F2C94C;
-          --deep-brown: #2D2926;
+          --olive: #8C9B81; --sand: #EAD9A6; --rose: #A67575; --green: #7A9680; --yellow: #F2C94C; --dark: #2D2926;
         }
-        body { margin: 0; padding: 0; background: var(--bg-olive) !important; }
-        .app-container { display: flex; width: 100vw; height: 100vh; font-family: sans-serif; }
+        body { margin: 0; background: var(--olive); font-family: 'Inter', sans-serif; overflow: hidden; }
+        .container { display: flex; width: 100vw; height: 100vh; background: var(--olive); }
         
-        .gallery { flex: 0 0 70%; padding: 40px; overflow-y: auto; border-right: 4px solid var(--deep-brown); background: var(--bg-olive); }
-        .sidebar { flex: 0 0 30%; background: var(--ui-sand); padding: 30px; overflow-y: auto; }
-
-        .h1 { font-size: 70px; font-weight: 900; text-transform: uppercase; margin-top: 0; color: var(--deep-brown); letter-spacing: -4px; }
+        /* ГАЛЕРЕЯ */
+        .main { flex: 0 0 70%; padding: 40px; overflow-y: auto; border-right: 3px solid var(--dark); box-sizing: border-box; }
+        .h1 { font-size: 60px; font-weight: 900; text-transform: uppercase; color: var(--dark); margin: 0 0 30px 0; letter-spacing: -3px; }
         
-        .filters { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 40px; }
-        .ui-el { background: var(--ui-sand); border: 3px solid var(--deep-brown); padding: 15px; border-radius: 15px; font-weight: 800; color: var(--deep-brown); outline: none; }
+        /* ФИЛЬТРЫ */
+        .filter-bar { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 40px; }
+        .ui-input { background: var(--sand); border: 3px solid var(--dark); padding: 12px; border-radius: 12px; font-weight: 800; color: var(--dark); outline: none; font-size: 14px; }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        /* СЕТКА 2x2 */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
         
-        .card-scene { height: 450px; perspective: 1200px; }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
-        .card-scene.flipped .card-inner { transform: rotateY(180deg); }
+        .scene { height: 420px; perspective: 1200px; }
+        .card { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
+        .scene.is-flipped .card { transform: rotateY(180deg); }
 
-        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 30px; border: 4px solid var(--deep-brown); padding: 30px; display: flex; flex-direction: column; box-sizing: border-box; }
-        .front.watched { background: var(--card-rose); }
-        .front.queue { background: var(--card-green); }
-        .back { background: var(--ui-sand); transform: rotateY(180deg); }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 25px; border: 4px solid var(--dark); padding: 25px; display: flex; flex-direction: column; box-sizing: border-box; }
+        .front.watched { background: var(--rose); }
+        .front.queue { background: var(--green); }
+        .back { background: var(--sand); transform: rotateY(180deg); }
 
-        .m-status { font-size: 11px; font-weight: 900; color: var(--text-yellow); text-transform: uppercase; }
-        .m-title { font-size: 32px; font-weight: 900; color: var(--text-yellow); text-transform: uppercase; margin: 15px 0; line-height: 1; }
-        .m-desc { font-size: 15px; line-height: 1.4; color: var(--text-yellow); display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
-        .m-rating { margin-top: auto; font-size: 50px; font-weight: 900; color: var(--text-yellow); }
+        .m-title { font-size: 28px; font-weight: 900; color: var(--yellow); text-transform: uppercase; margin: 10px 0; line-height: 1; }
+        .m-desc { font-size: 14px; color: var(--yellow); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        .m-rating { margin-top: auto; font-size: 45px; font-weight: 900; color: var(--yellow); }
 
-        .note-edit { flex: 1; background: rgba(0,0,0,0.05); border: 2px dashed var(--deep-brown); border-radius: 20px; padding: 20px; font-weight: 700; color: var(--deep-brown); resize: none; }
+        /* ЗАМЕТКИ */
+        .side { flex: 0 0 30%; background: var(--sand); padding: 30px; overflow-y: auto; box-sizing: border-box; }
+        .side-h { font-size: 22px; font-weight: 900; text-transform: uppercase; border-bottom: 3px solid var(--dark); padding-bottom: 10px; margin-bottom: 20px; }
+        .note-card { margin-bottom: 20px; border-bottom: 1px dashed var(--dark); padding-bottom: 10px; }
+        .note-card b { color: var(--rose); font-size: 12px; display: block; text-transform: uppercase; }
         
-        .sidebar-title { font-size: 24px; font-weight: 900; border-bottom: 4px solid var(--deep-brown); padding-bottom: 10px; margin-bottom: 30px; }
-        .note-item { margin-bottom: 25px; padding-bottom: 10px; border-bottom: 1px dashed var(--deep-brown); }
-        .note-item b { color: var(--card-rose); font-size: 12px; display: block; text-transform: uppercase; }
+        .textarea { flex: 1; background: rgba(0,0,0,0.05); border: 2px dashed var(--dark); border-radius: 15px; padding: 15px; font-weight: 700; color: var(--dark); resize: none; }
+        .loader { height: 100vh; background: var(--olive); display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--yellow); font-size: 24px; }
       `}</style>
 
-      <div className="gallery">
+      <div className="main">
         <h1 className="h1">Кино Архив</h1>
-        <div className="filters">
-          <input className="ui-el" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
-          <select className="ui-el" onChange={e => setGenreFilter(e.target.value)}>
-            <option value="ALL">ЖАНРЫ</option>
-            {genres.map(g => g !== 'ALL' && <option key={g} value={g}>{g}</option>)}
+        <div className="filter-bar">
+          <input className="ui-input" placeholder="ПОИСК..." onChange={e => setSearch(e.target.value)} />
+          <select className="ui-input" value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
+            <option value="ALL">ВСЕ ЖАНРЫ</option>
+            {genres.map(g => g !== 'ALL' && <option key={g} value={g}>{g.toUpperCase()}</option>)}
           </select>
-          <select className="ui-el" onChange={e => setYearFilter(e.target.value)}>
+          <select className="ui-input" value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
             <option value="ALL">ГОДЫ</option>
             {years.map(y => y !== 'ALL' && <option key={y} value={y}>{y}</option>)}
           </select>
-          <select className="ui-el" onChange={e => setStatusFilter(e.target.value)}>
+          <select className="ui-input" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="ALL">СТАТУС</option>
             <option value="WATCHED">СМОТРЕЛИ</option>
             <option value="QUEUE">В ОЧЕРЕДИ</option>
@@ -144,25 +135,25 @@ export default function MovieArchive() {
         </div>
 
         <div className="grid">
-          {filteredMovies.map((m, i) => (
-            <div key={i} className={`card-scene ${flipped[i] ? 'flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
-              <div className="card-inner">
+          {filtered.map((m, i) => (
+            <div key={i} className={`scene ${flipped[i] ? 'is-flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
+              <div className="card">
                 <div className={`face front ${m.isWatched ? 'watched' : 'queue'}`}>
-                  <div className="m-status">{m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}</div>
+                  <div style={{fontSize: '10px', fontWeight: 900, color: 'var(--yellow)'}}>{m.isWatched ? '● СМОТРЕЛИ' : '○ В ОЧЕРЕДИ'}</div>
                   <div className="m-title">{m.title}</div>
-                  <div style={{color: 'var(--text-yellow)', fontWeight: 700, marginBottom: '15px'}}>{m.genre} • {m.year}</div>
+                  <div style={{fontSize: '12px', fontWeight: 700, color: 'var(--yellow)', marginBottom: '10px'}}>{m.genre} • {m.year}</div>
                   <div className="m-desc">{m.desc}</div>
                   <div className="m-rating">{m.rating}</div>
                 </div>
                 <div className="face back" onClick={e => e.stopPropagation()}>
-                  <div style={{fontWeight: 900, marginBottom: '10px'}}>МЫСЛИ:</div>
+                  <div style={{fontWeight: 900, marginBottom: '10px'}}>ВАШИ МЫСЛИ:</div>
                   <textarea 
-                    className="note-edit"
+                    className="textarea"
                     value={notes[m.title] || ''}
                     onChange={(e) => {
                       const n = { ...notes, [m.title]: e.target.value };
                       setNotes(n);
-                      localStorage.setItem('shared_movie_notes', JSON.stringify(n));
+                      localStorage.setItem('movie_notes_shared', JSON.stringify(n));
                     }}
                   />
                   <div style={{marginTop: '10px', textAlign: 'center', fontSize: '10px', fontWeight: 900}} onClick={() => setFlipped({...flipped, [i]: false})}>[ ЗАКРЫТЬ ]</div>
@@ -173,12 +164,12 @@ export default function MovieArchive() {
         </div>
       </div>
 
-      <div className="sidebar">
-        <div className="sidebar-title">Лента заметок</div>
+      <div className="side">
+        <div className="side-h">Лента заметок</div>
         {Object.entries(notes).map(([title, text]) => text.trim() && (
-          <div key={title} className="note-item">
+          <div key={title} className="note-card">
             <b>{title}</b>
-            <div style={{fontSize: '14px'}}>{text}</div>
+            <div style={{fontSize: '14px', lineHeight: '1.4'}}>{text}</div>
           </div>
         ))}
       </div>
