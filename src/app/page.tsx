@@ -39,13 +39,9 @@ export default function MovieArchive() {
                 const k = Object.keys(row).find(key => keys.includes(key.trim().toLowerCase()));
                 return k ? row[k] : '';
               };
-              
               const rawRating = String(find(['рейтинг', 'rating', 'оценка']));
               const rawStatus = String(find(['статус', 'status'])).toLowerCase();
-              
-              // ЖЕЛЕЗНАЯ ЛОГИКА: Если есть цифра в рейтинге ИЛИ статус содержит "смотр" -> Watched
-              const hasDigit = /\d/.test(rawRating);
-              const isWatched = hasDigit || rawStatus.includes('смотр') || rawStatus.includes('да');
+              const isWatched = /\d/.test(rawRating) || rawStatus.includes('смотр') || rawStatus.includes('да');
 
               return {
                 title: find(['название', 'title']),
@@ -76,7 +72,7 @@ export default function MovieArchive() {
     });
   }, [movies, search, genreFilter, yearFilter, statusFilter]);
 
-  if (loading) return <div className="loader">ОБНОВЛЯЮ ЦВЕТА...</div>;
+  if (loading) return <div className="loader">ЗАГРУЗКА...</div>;
 
   return (
     <div className="app">
@@ -84,39 +80,75 @@ export default function MovieArchive() {
         :root {
           --olive: #8C9B81; --sand: #EAD9A6; --rose: #A67575; --green: #7A9680; --yellow: #F2C94C; --dark: #2D2926;
         }
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; background-color: var(--olive) !important; height: 100%; width: 100%; font-family: sans-serif; }
-        .app { display: flex; width: 100vw; height: 100vh; background: var(--olive); }
-        .main { flex: 0 0 70%; height: 100vh; overflow-y: auto; padding: 40px; border-right: 4px solid var(--dark); }
-        .side { flex: 0 0 30%; background: var(--sand); height: 100vh; overflow-y: auto; padding: 30px; }
-        .h1 { font-size: 60px; font-weight: 900; text-transform: uppercase; color: var(--dark); margin: 0 0 30px 0; letter-spacing: -3px; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        .filter-container { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 40px; }
-        .filter-selectors { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .ui-el { width: 100%; background: var(--sand); border: 3px solid var(--dark); padding: 15px; border-radius: 14px; font-weight: 800; color: var(--dark); outline: none; font-size: 14px; }
+        html, body { 
+          margin: 0; padding: 0; background-color: var(--olive) !important; 
+          font-family: sans-serif; height: 100%; scroll-behavior: smooth;
+        }
 
-        .movie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        .scene { height: 460px; perspective: 1500px; }
-        .card { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); transform-style: preserve-3d; cursor: pointer; }
+        .app { display: flex; flex-direction: row; min-height: 100vh; background: var(--olive); }
+
+        /* ОСНОВНАЯ ПАНЕЛЬ */
+        .main { flex: 1; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        
+        /* БОКОВАЯ ПАНЕЛЬ */
+        .side { width: 350px; background: var(--sand); padding: 30px; border-left: 4px solid var(--dark); overflow-y: auto; }
+
+        .h1 { font-size: clamp(30px, 8vw, 60px); font-weight: 900; text-transform: uppercase; color: var(--dark); margin-bottom: 20px; letter-spacing: -2px; }
+        
+        /* АДАПТИВНЫЕ ФИЛЬТРЫ */
+        .filter-container { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 30px; }
+        .filter-selectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+        
+        .ui-el { 
+          width: 100%; background: var(--sand); border: 3px solid var(--dark); 
+          padding: 12px; border-radius: 12px; font-weight: 800; color: var(--dark); outline: none; 
+        }
+
+        /* АДАПТИВНАЯ СЕТКА */
+        .movie-grid { 
+          display: grid; 
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+          gap: 20px; 
+        }
+        
+        .scene { height: 420px; perspective: 1200px; }
+        .card { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); transform-style: preserve-3d; }
         .scene.flipped .card { transform: rotateY(180deg); }
 
-        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 30px; border: 4px solid var(--dark); padding: 35px; display: flex; flex-direction: column; }
+        .face { 
+          position: absolute; width: 100%; height: 100%; backface-visibility: hidden; 
+          border-radius: 25px; border: 4px solid var(--dark); padding: 25px; 
+          display: flex; flex-direction: column; 
+        }
         
-        /* ГЛАВНОЕ ИСПРАВЛЕНИЕ ТУТ */
-        .face.front { transition: background 0.3s ease; }
-        .is-watched-bg { background: var(--rose) !important; }
-        .is-queue-bg { background: var(--green) !important; }
-
+        .face.front.is-watched-bg { background: var(--rose) !important; }
+        .face.front.is-queue-bg { background: var(--green) !important; }
         .face.back { background: var(--sand); transform: rotateY(180deg); border-style: dashed; }
-        .m-status { font-size: 11px; font-weight: 900; color: var(--yellow); text-transform: uppercase; margin-bottom: 10px; }
-        .m-title { font-size: 32px; font-weight: 900; color: var(--yellow); text-transform: uppercase; line-height: 0.9; margin: 5px 0 15px 0; }
-        .m-meta { font-size: 13px; font-weight: 700; color: var(--yellow); opacity: 0.8; margin-bottom: 20px; }
-        .m-desc { font-size: 15px; line-height: 1.4; color: var(--yellow); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-        .m-rating-big { margin-top: auto; font-size: 50px; font-weight: 900; color: var(--yellow); letter-spacing: -2px; }
 
-        .note-input { width: 100%; flex: 1; background: rgba(0,0,0,0.03); border: 2px dashed var(--dark); border-radius: 20px; padding: 20px; font-weight: 700; color: var(--dark); resize: none; outline: none; margin: 15px 0; }
-        .side-title { font-size: 24px; font-weight: 900; text-transform: uppercase; border-bottom: 4px solid var(--dark); padding-bottom: 10px; margin-bottom: 25px; color: var(--dark); }
-        .loader { height: 100vh; background: var(--olive); display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--dark); font-size: 24px; }
+        .m-status { font-size: 10px; font-weight: 900; color: var(--yellow); text-transform: uppercase; margin-bottom: 5px; }
+        .m-title { font-size: 26px; font-weight: 900; color: var(--yellow); text-transform: uppercase; line-height: 1; margin: 5px 0; }
+        .m-meta { font-size: 12px; font-weight: 700; color: var(--yellow); opacity: 0.8; margin-bottom: 10px; }
+        .m-desc { font-size: 14px; line-height: 1.4; color: var(--yellow); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .m-rating-big { margin-top: auto; font-size: 40px; font-weight: 900; color: var(--yellow); }
+
+        .note-input { width: 100%; flex: 1; background: rgba(0,0,0,0.03); border: 2px dashed var(--dark); border-radius: 15px; padding: 15px; font-weight: 700; color: var(--dark); resize: none; margin: 10px 0; }
+
+        /* МЕДИА-ЗАПРОСЫ ДЛЯ МОБИЛОК */
+        @media (max-width: 1024px) {
+          .app { flex-direction: column; }
+          .main { flex: none; width: 100%; overflow-y: visible; }
+          .side { width: 100%; border-left: none; border-top: 4px solid var(--dark); height: auto; }
+          .movie-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        }
+
+        @media (min-width: 1400px) {
+          .movie-grid { grid-template-columns: 1fr 1fr; }
+          .filter-container { grid-template-columns: 1fr 1fr; }
+        }
+
+        .loader { height: 100vh; background: var(--olive); display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--dark); }
       `}</style>
 
       <div className="main">
@@ -145,7 +177,6 @@ export default function MovieArchive() {
           {filtered.map((m, i) => (
             <div key={i} className={`scene ${flipped[i] ? 'flipped' : ''}`} onClick={() => setFlipped({...flipped, [i]: !flipped[i]})}>
               <div className="card">
-                {/* Теперь класс фона привязан напрямую к m.isWatched */}
                 <div className={`face front ${m.isWatched ? 'is-watched-bg' : 'is-queue-bg'}`}>
                   <div className="m-status">{m.isWatched ? '● ПРОСМОТРЕНО' : '○ В ОЧЕРЕДИ'}</div>
                   <div className="m-title">{m.title}</div>
@@ -153,21 +184,20 @@ export default function MovieArchive() {
                   <div className="m-desc">{m.desc}</div>
                   <div className="m-rating-big">{m.rating}</div>
                 </div>
-
                 <div className="face back" onClick={e => e.stopPropagation()}>
-                  <div style={{fontWeight: 900}}>ЗАМЕТКА:</div>
+                  <div style={{fontWeight: 900, fontSize: '12px'}}>ЗАМЕТКИ:</div>
                   <textarea 
                     className="note-input"
                     value={notes[m.title] || ''}
-                    placeholder="Напиши что-нибудь..."
+                    placeholder="Мысли о фильме..."
                     onChange={(e) => {
                       const n = { ...notes, [m.title]: e.target.value };
                       setNotes(n);
                       localStorage.setItem('movie_notes_shared', JSON.stringify(n));
                     }}
                   />
-                  <div style={{textAlign: 'center', fontSize: '11px', fontWeight: 900, opacity: 0.6}} onClick={() => setFlipped({...flipped, [i]: false})}>
-                    КЛИКНИ, ЧТОБЫ ЗАКРЫТЬ
+                  <div style={{textAlign: 'center', fontSize: '10px', fontWeight: 900, cursor: 'pointer'}} onClick={() => setFlipped({...flipped, [i]: false})}>
+                    [ ЗАКРЫТЬ ]
                   </div>
                 </div>
               </div>
@@ -177,11 +207,11 @@ export default function MovieArchive() {
       </div>
 
       <div className="side">
-        <h2 className="side-title">Лента</h2>
+        <h2 style={{fontSize: '20px', fontWeight: 900, textTransform: 'uppercase', borderBottom: '3px solid var(--dark)', paddingBottom: '10px'}}>Лента заметок</h2>
         {Object.entries(notes).map(([title, text]) => text.trim() && (
-          <div key={title} style={{marginBottom: '20px', borderBottom: '1px solid rgba(0,0,0,0.1)', paddingBottom: '12px'}}>
-            <div style={{color: 'var(--rose)', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase'}}>{title}</div>
-            <div style={{fontSize: '14px', fontWeight: 600, color: 'var(--dark)', marginTop: '4px'}}>{text}</div>
+          <div key={title} style={{marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.1)'}}>
+            <div style={{color: 'var(--rose)', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase'}}>{title}</div>
+            <div style={{fontSize: '13px', fontWeight: 600, marginTop: '2px'}}>{text}</div>
           </div>
         ))}
       </div>
